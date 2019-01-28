@@ -147,7 +147,7 @@ c_vector<unsigned, 2> LongSpringDivisionModifier<DIM>::PickPairToDivide(Abstract
         MeshBasedCellPopulationWithGhostNodes<DIM>* p_cell_population = static_cast<MeshBasedCellPopulationWithGhostNodes<DIM>*>(&rCellPopulation);
 
         p_cell_population->CreateVoronoiTessellation();
-        
+
         for (unsigned i = 0; i < epithelial_epithelial_pairs.size(); i++)
         {
             c_vector<unsigned, 2> pair = epithelial_epithelial_pairs[i];
@@ -155,13 +155,13 @@ c_vector<unsigned, 2> LongSpringDivisionModifier<DIM>::PickPairToDivide(Abstract
             unsigned nodeA_global_index = pair[0];
             unsigned nodeB_global_index = pair[1];
 
-            // Get the distance between the two 
+            // Get the distance between the two
             double distance = p_cell_population->rGetMesh().GetDistanceBetweenNodes(nodeA_global_index, nodeB_global_index);
 
             std::pair<double, c_vector<unsigned, 2> > distance_and_index_pair = std::make_pair(1.0/distance, pair);
 
            distances_and_pairs.push_back(distance_and_index_pair);
-        
+
         }
     }
     else if (dynamic_cast<MeshBasedCellPopulation<DIM>*>(&rCellPopulation))
@@ -177,18 +177,18 @@ c_vector<unsigned, 2> LongSpringDivisionModifier<DIM>::PickPairToDivide(Abstract
             unsigned nodeA_global_index = pair[0];
             unsigned nodeB_global_index = pair[1];
 
-            // Get the distance between the two 
+            // Get the distance between the two
             double distance = p_cell_population->rGetMesh().GetDistanceBetweenNodes(nodeA_global_index, nodeB_global_index);
 
             std::pair<double, c_vector<unsigned, 2> > distance_and_index_pair = std::make_pair(1.0/distance, pair);
-            
+
             distances_and_pairs.push_back(distance_and_index_pair);
-        
+
         }
     }
 
-    // The first pair should be the one with the maximal distance
-    std::sort(distances_and_pairs.begin(), distances_and_pairs.end());
+//    // The first pair should be the one with the maximal distance
+//    std::sort(distances_and_pairs.begin(), distances_and_pairs.end());
 
     std::pair<double, c_vector<unsigned, 2> > maximal_distance_pair = distances_and_pairs[0];
 
@@ -218,87 +218,87 @@ void LongSpringDivisionModifier<DIM>::UpdateCellData(AbstractCellPopulation<DIM,
     // Make sure the cell population is updated
     rCellPopulation.Update();
 
-    if (IsTimeToDivide() )
-    {
-        // Pick the pair to diivde
-        c_vector<unsigned, 2> dividing_pair = PickPairToDivide(rCellPopulation);
-
-        unsigned nodeA_global_index = dividing_pair[0];
-        unsigned nodeB_global_index = dividing_pair[1];
-
-        // Split the edge between the two nodes
-        if (dynamic_cast<MeshBasedCellPopulationWithGhostNodes<DIM>*>(&rCellPopulation))
-        {
-            MeshBasedCellPopulationWithGhostNodes<DIM>* p_cell_population = static_cast<MeshBasedCellPopulationWithGhostNodes<DIM>*>(&rCellPopulation);
-
-            p_cell_population->CreateVoronoiTessellation();
-
-            // Get the nodes using the indices
-            Node<DIM>* p_nodeA = p_cell_population->GetNode(nodeA_global_index);
-            Node<DIM>* p_nodeB = p_cell_population->GetNode(nodeB_global_index);
-            
-            // Split the edge between the two 
-            c_vector<unsigned, 3> new_node_indices = p_cell_population->rGetMesh().SplitEdge(p_nodeA, p_nodeB);
-
-            // As a new node has been added, we need to add a cell there.
-            unsigned new_node_index = new_node_indices[0];
-
-            CellPtr p_neighbour_cell = p_cell_population->GetCellUsingLocationIndex(nodeA_global_index);
-            
-            // Create copy of cell property collection to modify for daughter cell
-            CellPropertyCollection daughter_property_collection = p_neighbour_cell->rGetCellPropertyCollection();
-    
-            // Remove the CellId from the daughter cell a new one will be assigned in the constructor
-            daughter_property_collection.RemoveProperty<CellId>();
-    
-            CellPtr p_new_cell(new Cell(p_neighbour_cell->GetMutationState(),
-                                        p_neighbour_cell->GetCellCycleModel()->CreateCellCycleModel(),
-                                        p_neighbour_cell->GetSrnModel()->CreateSrnModel(),
-                                        false,
-                                        daughter_property_collection));
-    
-            // Add new cell to cell population
-            p_cell_population->mCells.push_back(p_new_cell);
-            p_cell_population->AddCellUsingLocationIndex(new_node_index, p_new_cell);
-
-        }
-        else if (dynamic_cast<MeshBasedCellPopulation<DIM>*>(&rCellPopulation))
-        {
-            MeshBasedCellPopulation<DIM>* p_cell_population = static_cast<MeshBasedCellPopulation<DIM>*>(&rCellPopulation);
-
-            p_cell_population->CreateVoronoiTessellation();
-
-            // Get the nodes using the indices
-            Node<DIM>* p_nodeA = p_cell_population->GetNode(nodeA_global_index);
-            Node<DIM>* p_nodeB = p_cell_population->GetNode(nodeB_global_index);
-            
-            // Split the edge between the two 
-            c_vector<unsigned, 3> new_node_indices = p_cell_population->rGetMesh().SplitEdge(p_nodeA, p_nodeB);
-
-            // As a new node has been added, we need to add a cell there.
-            unsigned new_node_index = new_node_indices[0];
-
-            CellPtr p_neighbour_cell = p_cell_population->GetCellUsingLocationIndex(nodeA_global_index);
-            
-            // Create copy of cell property collection to modify for daughter cell
-            CellPropertyCollection daughter_property_collection = p_neighbour_cell->rGetCellPropertyCollection();
-
-            // Remove the CellId from the daughter cell a new one will be assigned in the constructor
-            daughter_property_collection.RemoveProperty<CellId>();
-
-            CellPtr p_new_cell(new Cell(p_neighbour_cell->GetMutationState(),
-                                        p_neighbour_cell->GetCellCycleModel()->CreateCellCycleModel(),
-                                        p_neighbour_cell->GetSrnModel()->CreateSrnModel(),
-                                        false,
-                                        daughter_property_collection));
-
-            // Add new cell to cell population
-            p_cell_population->mCells.push_back(p_new_cell);
-            p_cell_population->AddCellUsingLocationIndex(new_node_index, p_new_cell);
-
-        }
-
-    }
+//    if (IsTimeToDivide() )
+//    {
+//        // Pick the pair to diivde
+//        c_vector<unsigned, 2> dividing_pair = PickPairToDivide(rCellPopulation);
+//
+//        unsigned nodeA_global_index = dividing_pair[0];
+//        unsigned nodeB_global_index = dividing_pair[1];
+//
+//        // Split the edge between the two nodes
+//        if (dynamic_cast<MeshBasedCellPopulationWithGhostNodes<DIM>*>(&rCellPopulation))
+//        {
+//            MeshBasedCellPopulationWithGhostNodes<DIM>* p_cell_population = static_cast<MeshBasedCellPopulationWithGhostNodes<DIM>*>(&rCellPopulation);
+//
+//            p_cell_population->CreateVoronoiTessellation();
+//
+//            // Get the nodes using the indices
+//            Node<DIM>* p_nodeA = p_cell_population->GetNode(nodeA_global_index);
+//            Node<DIM>* p_nodeB = p_cell_population->GetNode(nodeB_global_index);
+//
+//            // Split the edge between the two
+//            c_vector<unsigned, 3> new_node_indices = p_cell_population->rGetMesh().SplitEdge(p_nodeA, p_nodeB);
+//
+//            // As a new node has been added, we need to add a cell there.
+//            unsigned new_node_index = new_node_indices[0];
+//
+//            CellPtr p_neighbour_cell = p_cell_population->GetCellUsingLocationIndex(nodeA_global_index);
+//
+//            // Create copy of cell property collection to modify for daughter cell
+//            CellPropertyCollection daughter_property_collection = p_neighbour_cell->rGetCellPropertyCollection();
+//
+//            // Remove the CellId from the daughter cell a new one will be assigned in the constructor
+//            daughter_property_collection.RemoveProperty<CellId>();
+//
+//            CellPtr p_new_cell(new Cell(p_neighbour_cell->GetMutationState(),
+//                                        p_neighbour_cell->GetCellCycleModel()->CreateCellCycleModel(),
+//                                        p_neighbour_cell->GetSrnModel()->CreateSrnModel(),
+//                                        false,
+//                                        daughter_property_collection));
+//
+//            // Add new cell to cell population
+//            p_cell_population->mCells.push_back(p_new_cell);
+//            p_cell_population->AddCellUsingLocationIndex(new_node_index, p_new_cell);
+//
+//        }
+//        else if (dynamic_cast<MeshBasedCellPopulation<DIM>*>(&rCellPopulation))
+//        {
+//            MeshBasedCellPopulation<DIM>* p_cell_population = static_cast<MeshBasedCellPopulation<DIM>*>(&rCellPopulation);
+//
+//            p_cell_population->CreateVoronoiTessellation();
+//
+//            // Get the nodes using the indices
+//            Node<DIM>* p_nodeA = p_cell_population->GetNode(nodeA_global_index);
+//            Node<DIM>* p_nodeB = p_cell_population->GetNode(nodeB_global_index);
+//
+//            // Split the edge between the two
+//            c_vector<unsigned, 3> new_node_indices = p_cell_population->rGetMesh().SplitEdge(p_nodeA, p_nodeB);
+//
+//            // As a new node has been added, we need to add a cell there.
+//            unsigned new_node_index = new_node_indices[0];
+//
+//            CellPtr p_neighbour_cell = p_cell_population->GetCellUsingLocationIndex(nodeA_global_index);
+//
+//            // Create copy of cell property collection to modify for daughter cell
+//            CellPropertyCollection daughter_property_collection = p_neighbour_cell->rGetCellPropertyCollection();
+//
+//            // Remove the CellId from the daughter cell a new one will be assigned in the constructor
+//            daughter_property_collection.RemoveProperty<CellId>();
+//
+//            CellPtr p_new_cell(new Cell(p_neighbour_cell->GetMutationState(),
+//                                        p_neighbour_cell->GetCellCycleModel()->CreateCellCycleModel(),
+//                                        p_neighbour_cell->GetSrnModel()->CreateSrnModel(),
+//                                        false,
+//                                        daughter_property_collection));
+//
+//            // Add new cell to cell population
+//            p_cell_population->mCells.push_back(p_new_cell);
+//            p_cell_population->AddCellUsingLocationIndex(new_node_index, p_new_cell);
+//
+//        }
+//
+//    }
 }
 
 template<unsigned DIM>

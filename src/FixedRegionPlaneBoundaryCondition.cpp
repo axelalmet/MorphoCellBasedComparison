@@ -62,9 +62,6 @@ void FixedRegionPlaneBoundaryCondition<DIM>::ImposeBoundaryCondition(const std::
             || (dynamic_cast<VertexBasedCellPopulation<DIM>*>(this->mpCellPopulation))
             || (dynamic_cast<NodeBasedCellPopulation<DIM>*>(this->mpCellPopulation)) );
 
-    // THis is a magic number.
-    double max_jiggle = 1e-4;
-
     if (DIM != 1)
     {
         if (dynamic_cast<AbstractCentreBasedCellPopulation<DIM>*>(this->mpCellPopulation))

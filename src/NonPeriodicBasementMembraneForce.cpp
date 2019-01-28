@@ -407,7 +407,7 @@ double NonPeriodicBasementMembraneForce::GetCurvatureFromNodePair(AbstractCellPo
     	//Subtract the target curvature
     	curvature -= mTargetCurvature;
 
-    	assert(!isnan(curvature));
+    	assert(!std::isnan(curvature));
     	return curvature;
     }
 }
@@ -624,7 +624,7 @@ void NonPeriodicBasementMembraneForce::AddForceContribution(AbstractCellPopulati
 
 		double distance_between_nodes = norm_2(curvature_force_direction);
 		assert(distance_between_nodes > 0);
-		assert(!isnan(distance_between_nodes));
+		assert(!std::isnan(distance_between_nodes));
 
 		curvature_force_direction /= distance_between_nodes;
 

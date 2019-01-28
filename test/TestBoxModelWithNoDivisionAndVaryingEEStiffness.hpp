@@ -42,11 +42,11 @@ public:
 		double stromal_stromal_stiffness = 15.0;
 
 		//Set the number of cells across and down for the array
-		unsigned cells_across = 21;
+		unsigned cells_across = 13;
 		unsigned cells_up = 5;
 		unsigned ghosts = 2; //Set the number of ghost node layers
 
-		for (double SS = 1.0; SS < 4.0; SS++)
+		for (double SS = 1.0; SS < 6.0; SS++)
 		{
 			double epithelial_epithelial_stiffness = 15.0*SS;
 
@@ -348,8 +348,14 @@ public:
 
 						std::sort(x_coords_and_epithelial_indices.begin(), x_coords_and_epithelial_indices.end());
 
-						// Now we can calculate the wrinkliness
+						// Now we can calculate the wrinkliness and the amplitude of the epithelium
 						double wrinkliness = 0.0;
+						double max_y_distance = 0.0;
+
+						// Get the left most cell location
+						unsigned left_node_index = x_coords_and_epithelial_indices[0].second;
+						CellPtr left_most_cell = simulator.rGetCellPopulation().GetCellUsingLocationIndex(left_node_index);
+						c_vector<double, 2> left_cell_location = simulator.rGetCellPopulation().GetLocationOfCellCentre(left_most_cell);
 
 						for (unsigned i = 0; i < (x_coords_and_epithelial_indices.size() - 1); i++)
 						{
@@ -363,6 +369,12 @@ public:
 							c_vector<double, 2> second_location = simulator.rGetCellPopulation().GetLocationOfCellCentre(second_epithelial_cell);
 
 							double wrinkliness_increment = fabs((second_location[1] - first_location[1])/(second_location[0] - first_location[0]));
+							double y_distance = fabs(left_cell_location[1] - second_location[1]);
+
+							if (y_distance > max_y_distance)
+							{
+								max_y_distance = y_distance;
+							}
 
 							wrinkliness += wrinkliness_increment;
 						}
@@ -370,7 +382,8 @@ public:
 						wrinkliness /= (num_epithelial_epithelial_connections);
 
 						// Finally, we can write the data to the file
-						*epithelium_data_file << initial_length << "\t" << growth_length << "\t" << current_length << "\t" << wrinkliness << "\n";
+						*epithelium_data_file << initial_length << "\t" << growth_length << "\t" << current_length
+								<< "\t" << wrinkliness << "\t" << max_y_distance << "\n";
 						
 						// For completeness, we should write the positions of the epithelium to file as well.
 						std::string epithelium_positions_filename = "epithelium_positions.dat";

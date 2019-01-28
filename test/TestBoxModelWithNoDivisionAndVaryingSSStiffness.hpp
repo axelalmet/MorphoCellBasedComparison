@@ -46,7 +46,7 @@ public:
 		unsigned cells_up = 5;
 		unsigned ghosts = 2; //Set the number of ghost node layers
 
-		for (double SS = 1.0; SS < 4.0; SS++)
+		for (double SS = 2.0; SS < 4.0; SS++)
 		{
             double stromal_stromal_stiffness = 15.0*SS;
 
