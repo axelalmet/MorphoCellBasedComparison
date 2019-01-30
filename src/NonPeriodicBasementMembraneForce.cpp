@@ -15,7 +15,12 @@
 NonPeriodicBasementMembraneForce::NonPeriodicBasementMembraneForce()
    :  AbstractForce<2>(),
    mBasementMembraneParameter(DOUBLE_UNSET),
-   mTargetCurvature(DOUBLE_UNSET)
+   mTargetCurvature(DOUBLE_UNSET),
+   mLeftBoundary(DOUBLE_UNSET),
+   mRightBoundary(DOUBLE_UNSET),
+   mApplyForceToCrypt(false),
+   mUsePositionDependentMembraneForce(false),
+   mMembraneForceMultiplier(DOUBLE_UNSET)
 {
 }
 
@@ -45,6 +50,36 @@ void NonPeriodicBasementMembraneForce::SetTargetCurvature(double targetCurvature
 double NonPeriodicBasementMembraneForce::GetTargetCurvature()
 {
 	return mTargetCurvature;
+}
+
+void NonPeriodicBasementMembraneForce::SetLeftCryptBoundary(double leftBoundary)
+{
+	mLeftBoundary = leftBoundary;
+}
+
+double NonPeriodicBasementMembraneForce::GetLeftCryptBoundary()
+{
+	return mLeftBoundary;
+}
+
+void NonPeriodicBasementMembraneForce::SetRightCryptBoundary(double rightBoundary)
+{
+	mRightBoundary = rightBoundary;
+}
+
+double NonPeriodicBasementMembraneForce::GetRightCryptBoundary()
+{
+	return mRightBoundary;
+}
+
+bool NonPeriodicBasementMembraneForce::IsForceAppliedToCrypt()
+{
+	return mApplyForceToCrypt;
+}
+
+void NonPeriodicBasementMembraneForce::ApplyForceToCrypt(bool applyForceToCrypt)
+{
+	mApplyForceToCrypt = applyForceToCrypt;
 }
 
 void NonPeriodicBasementMembraneForce::RemoveDuplicates1D(std::vector<unsigned>& rVectorWithDuplicates)
@@ -404,8 +439,19 @@ double NonPeriodicBasementMembraneForce::GetCurvatureFromNodePair(AbstractCellPo
     	// Need to subtract the target curvature if the epithelial node lies in the crypt base
     	c_vector<double, 2> epithelial_location = p_tissue->GetNode(epithelialNodeIndex)->rGetLocation();
 
-    	//Subtract the target curvature
-    	curvature -= mTargetCurvature;
+		bool apply_force_to_crypt = IsForceAppliedToCrypt();
+
+		if (apply_force_to_crypt)
+		{
+			double left_boundary = GetLeftCryptBoundary();
+			double right_boundary = GetRightCryptBoundary();
+			double target_curvature = GetTargetCurvature();
+
+			if ( (epithelial_location[0] > left_boundary)&&(epithelial_location[0] < right_boundary) )
+			{
+				curvature -= target_curvature;
+			}
+		}
 
     	assert(!std::isnan(curvature));
     	return curvature;
@@ -644,6 +690,11 @@ void NonPeriodicBasementMembraneForce::OutputForceParameters(out_stream& rParams
 {
 	*rParamsFile <<  "\t\t\t<BasementMembraneParameter>"<<  mBasementMembraneParameter << "</BasementMembraneParameter> \n";
 	*rParamsFile <<  "\t\t\t<TargetCurvature>"<< mTargetCurvature << "</TargetCurvature> \n";
+	*rParamsFile <<  "\t\t\t<LeftBoundary>" << mLeftBoundary << "</LeftBoundary> \n";
+	*rParamsFile <<  "\t\t\t<RightBoundary>" << mRightBoundary << "</RightBoundary> \n";
+	*rParamsFile <<  "\t\t\t<ApplyForceToCrypt>" << mApplyForceToCrypt << "</ApplyForceToCrypt> \n";
+	*rParamsFile <<  "\t\t\t<UsePositionDependentMembraneForce>" << mUsePositionDependentMembraneForce << "</UsePositionDependentMembraneForce> \n";
+	*rParamsFile <<  "\t\t\t<MembraneForceMultiplier>" << mMembraneForceMultiplier << "</MembraneForceMultiplier> \n";
 
 	// Call direct parent class
 	AbstractForce<2>::OutputForceParameters(rParamsFile);

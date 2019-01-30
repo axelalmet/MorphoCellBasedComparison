@@ -27,6 +27,20 @@ private :
     /** Target curvature for the layer of cells */
     double mTargetCurvature;
 
+    /** Left boundary to specify heterogeneous target curvature */
+    double mLeftBoundary;
+
+    /** Right boundary to specify heterogeneous target curvature */
+    double mRightBoundary;
+
+    /** Specifies whether or not we are applying heterogeneous target curvature */
+    bool mApplyForceToCrypt;
+
+    /** Specifies whether basement membrane stiffness is heterogeneous */
+    bool mUsePositionDependentMembraneForce;
+
+    double mMembraneForceMultiplier;
+
     /** Needed for serialization. */
     friend class boost::serialization::access;
     /**
@@ -43,6 +57,12 @@ private :
         archive & boost::serialization::base_object<AbstractForce<2> >(*this);
         archive & mBasementMembraneParameter;
         archive & mTargetCurvature;
+        archive & mLeftBoundary;
+        archive & mRightBoundary;
+        archive & mApplyForceToCrypt;
+        archive & mUsePositionDependentMembraneForce;
+        archive & mMembraneForceMultiplier;
+
     }
 
 public :
@@ -72,6 +92,30 @@ public :
      *
      */
     double GetTargetCurvature();
+
+    /*
+     * Set method for Left Boundary
+     */
+    void SetLeftCryptBoundary(double leftBoundary);
+
+    /*
+     * Get method for Left Boundary
+     */
+    double GetLeftCryptBoundary();
+
+    /*
+     * Set method for Right Boundary
+     */
+    void SetRightCryptBoundary(double rightBoundary);
+
+    /*
+     * Get method for Right Boundary
+     */
+    double GetRightCryptBoundary();
+
+    bool IsForceAppliedToCrypt();
+
+    void ApplyForceToCrypt(bool applyForceToCrypt);
 
     /* Removing duplicated entries of a vector
      */
