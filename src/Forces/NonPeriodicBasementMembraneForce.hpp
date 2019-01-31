@@ -39,6 +39,9 @@ private :
     /** Specifies whether basement membrane stiffness is heterogeneous */
     bool mUsePositionDependentMembraneForce;
 
+    /** Specify whether target curvature is vertically heterogeneous */
+    bool mApplyVerticallyDependentTargetCurvature;
+
     double mMembraneForceMultiplier;
 
     /** Needed for serialization. */
@@ -60,7 +63,7 @@ private :
         archive & mLeftBoundary;
         archive & mRightBoundary;
         archive & mApplyForceToCrypt;
-        archive & mUsePositionDependentMembraneForce;
+        archive & mApplyVerticallyDependentTargetCurvature;
         archive & mMembraneForceMultiplier;
 
     }
@@ -117,6 +120,10 @@ public :
 
     void ApplyForceToCrypt(bool applyForceToCrypt);
 
+    void ApplyVerticallyDependentTargetCurvature(bool applyVerticallyDependentTargetCurvature);
+
+    bool ApplyVerticallyDependentTargetCurvature();
+
     /* Removing duplicated entries of a vector
      */
     void RemoveDuplicates1D(std::vector<unsigned>& rVectorWithDuplicates);
@@ -124,6 +131,9 @@ public :
     /* Returns a boolean for whether the element contains ghost nodes
      */
     bool DoesElementContainGhostNodes(AbstractCellPopulation<2>& rCellPopulation, unsigned elementIndex);
+
+    /* Returns crypt height extremes to apply non-zero curvature to base */
+    c_vector<double, 2> GetCryptHeightExtremes(AbstractCellPopulation<2>& rCellPopulation);
 
     /* Finding the connected pairs of epithelial-tissue nodes
      */

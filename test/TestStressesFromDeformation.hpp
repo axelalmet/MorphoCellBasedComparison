@@ -19,6 +19,7 @@
 #include "DifferentiatedCellProliferativeType.hpp" //Stops cells from proliferating
 #include "NoCellCycleModel.hpp"
 #include "UniformCellCycleModel.hpp"
+#include "ContactInhibitionCellCycleModel.hpp"
 #include "StemCellProliferativeType.hpp"
 #include "WildTypeCellMutationState.hpp"
 #include "LongSpringDivisionModifier.hpp"
@@ -28,6 +29,7 @@
 #include "NonPeriodicBasementMembraneForce.hpp" //BM force (based off Dunn et al. (2012))
 #include "OverlappingSpheresBasedBasementMembraneForce.hpp" //Overlapping spheres equivalent
 #include "AnoikisCellKiller.hpp" // Anoikis-based cell killer
+#include "PositionAndForceTrackingModifier.hpp" // Modifier to track the epithelium and resultant forces
 #include "PetscSetupAndFinalize.hpp"
 
 #include "Debug.hpp"
@@ -41,7 +43,7 @@ public:
 	{
 		double dt = 0.01; //Set dt
 		double end_time = 1.0; //Set end time
-		double sampling_timestep = end_time/dt;
+		double sampling_timestep = 0.25/dt;
 
 		//Set all the spring stiffness variables
 		double epithelial_epithelial_stiffness = 15.0;
@@ -50,15 +52,15 @@ public:
 
 		//Set the number of cells across and down for the array
 		unsigned cells_across = 20;
-		unsigned cells_up = 10;
+		unsigned cells_up = 6;
 		unsigned ghosts = 2; //Set the number of ghost node layers
 
 		//Set the basement membrane force parameters
-		double bm_stiffness = 12.0;
+		double bm_stiffness = 10.0;
 		double target_curvature = 0.4;
 
-		double left_boundary = 7.5;
-		double right_boundary = 12.5;
+		double left_boundary = 3.0;
+		double right_boundary = 13.0;
 
 		double epithelial_epithelial_resting_spring_length = 1.0;
 
@@ -139,8 +141,8 @@ public:
 				UniformCellCycleModel* p_cycle_model = new UniformCellCycleModel(); //Uniformly distributed cell cycle times
 				double birth_time = 12.0*RandomNumberGenerator::Instance()->ranf(); //We would like the birth time to be ~U(0,13) and set in the past
 				p_cycle_model->SetBirthTime(-birth_time);
-				p_cycle_model->SetMinCellCycleDuration(10.0);
-				p_cycle_model->SetMaxCellCycleDuration(14.0);
+//				p_cycle_model->SetMinCellCycleDuration(10.0);
+//				p_cycle_model->SetMaxCellCycleDuration(14.0);
 
 				CellPtr p_cell(new Cell(p_wildtype_state, p_cycle_model));
 				p_cell->InitialiseCellCycleModel(); // For paranoia really.
@@ -220,90 +222,17 @@ public:
 
 		simulator.Solve();
 
-		//		// Calculate the relevant quantities. First we need to get the epithelium.
-		//		std::vector<unsigned> epithelial_indices;
-		//
-		//		for (AbstractCellPopulation<2>::Iterator cell_iter = simulator.rGetCellPopulation().Begin();
-		//				cell_iter != simulator.rGetCellPopulation().End(); ++cell_iter)
-		//		{
-		//			if (cell_iter->GetCellProliferativeType()->IsType<StemCellProliferativeType>())
-		//			{
-		//				unsigned index = simulator.rGetCellPopulation().GetLocationIndexUsingCell(*cell_iter);
-		//
-		//				epithelial_indices.push_back(index);
-		//			}
-		//		}
-		//
-		//
-		////		MeshBasedCellPopulationWithGhostNodes<2>* p_cell_population = static_cast<MeshBasedCellPopulationWithGhostNodes<2>*>(&simulator.rGetCellPopulation());
-		////
-		////		p_cell_population->CreateVoronoiTessellation();
-		//
-		//		//Create results file for model
-		//		OutputFileHandler results_handler(output_directory + "/", false); //Create output file handler
-		//
-		//		// For completeness, we should write the positions of the epithelium to file as well.
-		//		std::string epithelium_positions_filename = "epithelium_positions.dat";
-		//		out_stream epithelium_positions_file = results_handler.OpenOutputFile(epithelium_positions_filename);
-		//
-		//		// We also include the applied forces on the epithelium
-		//		std::string epithelium_forces_filename = "epithelium_forces.dat";
-		//		out_stream epithelium_forces_file = results_handler.OpenOutputFile(epithelium_forces_filename);
-		//
-		//		//We need to sort the epithelial cells by x-coordinates to determine 'wrinkliness'.
-		//		std::vector<std::pair<double, unsigned> > x_coords_and_epithelial_indices;
-		//
-		//		for (unsigned i = 0; i < epithelial_indices.size(); i++)
-		//		{
-		//			unsigned epithelial_index = epithelial_indices[i]; // Get the node index
-		//
-		//			CellPtr epithelial_cell = simulator.rGetCellPopulation().GetCellUsingLocationIndex(epithelial_index); //Get the cell
-		//
-		//			//Get the cell location
-		//			double x = simulator.rGetCellPopulation().GetLocationOfCellCentre(epithelial_cell)[0];
-		//
-		//			std::pair<double, unsigned> position_and_index = std::make_pair(x, epithelial_index);
-		//
-		//			x_coords_and_epithelial_indices.push_back(position_and_index);
-		//		}
-		//
-		//		std::sort(x_coords_and_epithelial_indices.begin(), x_coords_and_epithelial_indices.end());
-		//
-		//		MeshBasedCellPopulationWithGhostNodes<2>* p_cell_population = static_cast<MeshBasedCellPopulationWithGhostNodes<2>*>(&simulator.rGetCellPopulation());
-		//
-		//		p_cell_population->CreateVoronoiTessellation();
-		//
-		//		// Now iterate through the sorted vector
-		//		for (unsigned i = 0; i < x_coords_and_epithelial_indices.size(); i++)
-		//		{
-		//			unsigned node_index = x_coords_and_epithelial_indices[i].second;
-		//
-		//			CellPtr epithelial_cell = simulator.rGetCellPopulation().GetCellUsingLocationIndex(node_index);
-		//
-		//			// Get the cell position
-		//			c_vector<double, 2> location = simulator.rGetCellPopulation().GetLocationOfCellCentre(epithelial_cell);
-		//
-		//			*epithelium_positions_file << location[0] << "\t" << location[1] << "\n";
-		//
-		//			// Get the applied force
-		//			Node<2>* epithelial_node = p_cell_population->rGetMesh().GetNode(node_index);
-		//
-		//			c_vector<double, 2> applied_force = epithelial_node->rGetAppliedForce();
-		//
-		////			*epithelium_forces_file << applied_force[0] << "\t" << applied_force[1] << "\n";
-		//		}
-
 	}
 	void TestBuckledCryptEpithelium()
 	{
 		double dt = 0.01; //Set dt
-		double end_time = 1.0; //Set end time
-		double sampling_timestep = end_time/dt;
+		double end_time = 5.0; //Set end time
+		double sampling_timestep = 0.25/dt;
 
 		//Set all the spring stiffness variables
 		double epithelial_epithelial_stiffness = 45.0;
-		double epithelial_stromal_stiffness = 15.0;
-		double stromal_stromal_stiffness = 15.0;
+		double epithelial_stromal_stiffness = 45.0;
+		double stromal_stromal_stiffness = 45.0;
 
 		//Set the number of cells across and down for the array
 		unsigned cells_across = 10;
@@ -312,13 +241,13 @@ public:
 
 		//Set the basement membrane force parameters
 		double bm_stiffness = 12.0;
-		double target_curvature = 0.4;
+		double target_curvature = 0.3;
 
 		double left_boundary = 2.5;
 		double right_boundary = 5.0;
-		double bottom_boundary = 5.0;
+		double bottom_boundary = 4.0;
 
-		double epithelial_epithelial_resting_spring_length = 1.0;
+		double epithelial_epithelial_resting_spring_length = 1.2;
 
 		//Generate the mesh
 		HoneycombMeshGenerator generator(cells_across, cells_up, ghosts);
@@ -394,7 +323,11 @@ public:
 		{
 
 			//Set stochastic duration based cell cycle
+//			UniformCellCycleModel* p_cycle_model = new UniformCellCycleModel(); //Uniformly distributed cell cycle times
 			NoCellCycleModel* p_cycle_model = new NoCellCycleModel(); //Uniformly distributed cell cycle times
+			p_cycle_model->SetDimension(2);
+			double birth_time = 6.0*RandomNumberGenerator::Instance()->ranf(); //We would like the birth time to be ~U(0,13) and set in the past
+			p_cycle_model->SetBirthTime(-birth_time);
 
 			CellPtr p_cell(new Cell(p_wildtype_state, p_cycle_model));
 			p_cell->InitialiseCellCycleModel(); // For paranoia really.
@@ -513,6 +446,7 @@ public:
 		p_bm_force->SetBasementMembraneParameter(bm_stiffness); //Equivalent to beta in SJD's papers
 		p_bm_force->SetTargetCurvature(target_curvature); //This is equivalent to 1/R in SJD's papers
 		p_bm_force->ApplyForceToCrypt(true);
+		p_bm_force->ApplyVerticallyDependentTargetCurvature(true);
 //		p_bm_force->SetLeftCryptBoundary(left_boundary);
 //		p_bm_force->SetRightCryptBoundary(right_boundary);
 		simulator.AddForce(p_bm_force);
@@ -520,6 +454,11 @@ public:
 		//Add anoikis-based cell killer
 		MAKE_PTR_ARGS(AnoikisCellKiller, p_anoikis_killer, (&cell_population));
 		simulator.AddCellKiller(p_anoikis_killer);
+
+		//Create pointer to add modifier that cracks positions and forces of epithelial cells
+		MAKE_PTR(PositionAndForceTrackingModifier<2>, p_epithelium_and_forces_tracking_modifier);
+		//Add modifier to simulation
+		simulator.AddSimulationModifier(p_epithelium_and_forces_tracking_modifier);
 
 		//Fix the bottom row of cells
 		c_vector<double, 2> point, normal;
