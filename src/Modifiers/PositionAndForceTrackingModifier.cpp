@@ -135,8 +135,6 @@ std::vector<unsigned> PositionAndForceTrackingModifier<DIM>::GetEpitheliumInArcL
 	{
 		MeshBasedCellPopulationWithGhostNodes<DIM>* p_cell_population = static_cast<MeshBasedCellPopulationWithGhostNodes<DIM>*>(&rCellPopulation);
 
-		p_cell_population->CreateVoronoiTessellation();
-
 		for(typename AbstractCellPopulation<DIM>::Iterator cell_iter = rCellPopulation.Begin();
 				cell_iter != rCellPopulation.End();
 				++cell_iter)
@@ -218,31 +216,22 @@ void PositionAndForceTrackingModifier<DIM>::CalculateModifierData(AbstractCellPo
 	std::vector<double> x_coordinates;
 	std::vector<double> y_coordinates;
 	std::vector<double> arclengths;
-	std::vector<double> horizontal_forces;
-	std::vector<double> vertical_forces;
 	std::vector<double> turning_angles;
 
 	if (dynamic_cast<MeshBasedCellPopulationWithGhostNodes<DIM>*>(&rCellPopulation))
 	{
 		MeshBasedCellPopulationWithGhostNodes<DIM>* p_cell_population = static_cast<MeshBasedCellPopulationWithGhostNodes<DIM>*>(&rCellPopulation);
 
-		p_cell_population->CreateVoronoiTessellation();
-
 		for (unsigned i = 0; i < num_epithelial_cells; i++)
 		{
 			// Get the location and force via the index
 			unsigned epithelial_node_index = epithelial_indices[i];
 
-			c_vector<double, 2> cell_location = p_cell_population->rGetMesh().GetNode(epithelial_node_index)->rGetLocation();
-			c_vector<double, 2> applied_force = p_cell_population->rGetMesh().GetNode(epithelial_node_index)->rGetAppliedForce();
+			c_vector<double, 2> cell_location = p_cell_population->GetNode(epithelial_node_index)->rGetLocation();
 
 			// Add the coordinates
 			x_coordinates.push_back(cell_location[0]);
 			y_coordinates.push_back(cell_location[1]);
-
-//			// Add the force contributions
-			horizontal_forces.push_back(applied_force[0]);
-			vertical_forces.push_back(applied_force[1]);
 
 		}
 
@@ -302,20 +291,6 @@ void PositionAndForceTrackingModifier<DIM>::CalculateModifierData(AbstractCellPo
 		for (unsigned i = 0; i < num_epithelial_cells; i++)
 		{
 			*mpDataFile << y_coordinates[i] << "\t";
-		}
-		*mpDataFile << "\n";
-
-		// horizontal forces
-		for (unsigned i = 0; i < num_epithelial_cells; i++)
-		{
-			*mpDataFile << horizontal_forces[i] << "\t";
-		}
-		*mpDataFile << "\n";
-
-		// vertical forces
-		for (unsigned i = 0; i < num_epithelial_cells; i++)
-		{
-			*mpDataFile << vertical_forces[i] << "\t";
 		}
 		*mpDataFile << "\n";
 

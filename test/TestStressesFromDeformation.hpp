@@ -22,7 +22,6 @@
 #include "ContactInhibitionCellCycleModel.hpp"
 #include "StemCellProliferativeType.hpp"
 #include "WildTypeCellMutationState.hpp"
-#include "LongSpringDivisionModifier.hpp"
 #include "FixedRegionPlaneBoundaryCondition.hpp" // Fixed-position boundary condition
 #include "FakePetscSetup.hpp" //Forbids tests running in parallel
 #include "LinearSpringForceWithVariableRestLength.hpp"
@@ -30,6 +29,7 @@
 #include "OverlappingSpheresBasedBasementMembraneForce.hpp" //Overlapping spheres equivalent
 #include "AnoikisCellKiller.hpp" // Anoikis-based cell killer
 #include "PositionAndForceTrackingModifier.hpp" // Modifier to track the epithelium and resultant forces
+#include "GeneralisedCellAppliedForceWriter.hpp" // Modifier to write forces
 #include "PetscSetupAndFinalize.hpp"
 
 #include "Debug.hpp"
@@ -52,35 +52,25 @@ public:
 
 		//Set the number of cells across and down for the array
 		unsigned cells_across = 20;
-		unsigned cells_up = 6;
+		unsigned cells_up = 10;
 		unsigned ghosts = 2; //Set the number of ghost node layers
 
 		//Set the basement membrane force parameters
 		double bm_stiffness = 10.0;
-		double target_curvature = 0.4;
-
-		double left_boundary = 3.0;
-		double right_boundary = 13.0;
+		double target_curvature = 0.1;
 
 		double epithelial_epithelial_resting_spring_length = 1.0;
 
-		//Generate the mesh
-		HoneycombMeshGenerator generator(cells_across, cells_up, ghosts);
-		MutableMesh<2,2>* p_mesh = generator.GetMesh();
+		//Generate the mesh (non-periodic)
+//		HoneycombMeshGenerator generator(cells_across, cells_up, ghosts);
+//		MutableMesh<2,2>* p_mesh = generator.GetMesh();
+
+		//Generate the periodic mesh
+		CylindricalHoneycombMeshGenerator generator(cells_across, cells_up, ghosts);
+		Cylindrical2dMesh* p_mesh = generator.GetCylindricalMesh();
 
 		//Get the real indices
 		std::vector<unsigned> location_indices = generator.GetCellLocationIndices();
-
-		//Translate mesh 1.5 units left and 1.5 units down, so that we have a layer of fixed cells around the boundary for the BC.
-		c_vector<double, 2> translate_left = zero_vector<double>(2);
-		translate_left(0) = -1.0;
-
-		c_vector<double, 2> translate_down = zero_vector<double>(2);
-		translate_down(1) = 0.0;
-
-		//Translate mesh appropriately
-		p_mesh->Translate(translate_left);
-		p_mesh->Translate(translate_down);
 
 		//Get the maximum width and height of the real nodes to define the monolayer
 		double max_height = 0.0;
@@ -102,6 +92,9 @@ public:
 				max_width = x;
 			}
 		}
+
+		double left_boundary = 0.25*max_width;
+		double right_boundary = 0.75*max_width;
 
 
 		//Create the vector of cells
@@ -161,6 +154,7 @@ public:
 		//Output data to vtk format so we can visualise it in Paraview
 		cell_population.SetWriteVtkAsPoints(true);
 		cell_population.AddPopulationWriter<VoronoiDataWriter>();
+        cell_population.AddCellWriter<GeneralisedCellAppliedForceWriter>();
 
 		OffLatticeSimulation<2> simulator(cell_population);
 
@@ -206,27 +200,13 @@ public:
 		MAKE_PTR_ARGS(FixedRegionPlaneBoundaryCondition<2>, p_bc1, (&cell_population, point, normal));
 		simulator.AddCellPopulationBoundaryCondition(p_bc1);
 
-		point(0) = -0.25;
-		point(1) = 0.0;
-		normal(0) = -1.0;
-		normal(1) = 0.0;
-		MAKE_PTR_ARGS(FixedRegionPlaneBoundaryCondition<2>, p_bc2, (&cell_population, point, normal));
-		simulator.AddCellPopulationBoundaryCondition(p_bc2);
-
-		point(0) = max_width - 0.75;
-		point(1) = 0.0;
-		normal(0) = 1.0;
-		normal(1) = 0.0;
-		MAKE_PTR_ARGS(FixedRegionPlaneBoundaryCondition<2>, p_bc3, (&cell_population, point, normal));
-		simulator.AddCellPopulationBoundaryCondition(p_bc3);
-
 		simulator.Solve();
 
 	}
 	void TestBuckledCryptEpithelium()
 	{
 		double dt = 0.01; //Set dt
-		double end_time = 5.0; //Set end time
+		double end_time = 10.0; //Set end time
 		double sampling_timestep = 0.25/dt;
 
 		//Set all the spring stiffness variables
@@ -242,30 +222,23 @@ public:
 		//Set the basement membrane force parameters
 		double bm_stiffness = 12.0;
 		double target_curvature = 0.3;
-
-		double left_boundary = 2.5;
-		double right_boundary = 5.0;
+//
+		double left_boundary = 3.5;
+		double right_boundary = 6.0;
 		double bottom_boundary = 4.0;
 
 		double epithelial_epithelial_resting_spring_length = 1.2;
 
-		//Generate the mesh
-		HoneycombMeshGenerator generator(cells_across, cells_up, ghosts);
-		MutableMesh<2,2>* p_mesh = generator.GetMesh();
+		//Generate the mesh (non-periodic)
+//		HoneycombMeshGenerator generator(cells_across, cells_up, ghosts);
+//		MutableMesh<2,2>* p_mesh = generator.GetMesh();
+
+		// Generate the periodic mesh
+		CylindricalHoneycombMeshGenerator generator(cells_across, cells_up, ghosts);
+		Cylindrical2dMesh* p_mesh = generator.GetCylindricalMesh();
 
 		//Get the initial non-ghost indices
 		std::vector<unsigned> initial_location_indices = generator.GetCellLocationIndices();
-
-		//Translate mesh 1.5 units left and 1.5 units down, so that we have a layer of fixed cells around the boundary for the BC.
-		c_vector<double, 2> translate_left = zero_vector<double>(2);
-		translate_left(0) = -1.0;
-
-		c_vector<double, 2> translate_down = zero_vector<double>(2);
-		translate_down(1) = 0.0;
-
-		//Translate mesh appropriately
-		p_mesh->Translate(translate_left);
-		p_mesh->Translate(translate_down);
 
 		//Get the maximum width and height of the real nodes to define the monolayer
 		double max_height = 0.0;
@@ -309,6 +282,7 @@ public:
 				max_width = x;
 			}
 		}
+
 
 		//Create the vector of cells
 		//Create shared pointers for cell and mutation states
@@ -419,6 +393,7 @@ public:
 		//Output data to vtk format so we can visualise it in Paraview
 		cell_population.SetWriteVtkAsPoints(true);
 		cell_population.AddPopulationWriter<VoronoiDataWriter>();
+        cell_population.AddCellWriter<GeneralisedCellAppliedForceWriter>();
 
 		OffLatticeSimulation<2> simulator(cell_population);
 
@@ -455,11 +430,6 @@ public:
 		MAKE_PTR_ARGS(AnoikisCellKiller, p_anoikis_killer, (&cell_population));
 		simulator.AddCellKiller(p_anoikis_killer);
 
-		//Create pointer to add modifier that cracks positions and forces of epithelial cells
-		MAKE_PTR(PositionAndForceTrackingModifier<2>, p_epithelium_and_forces_tracking_modifier);
-		//Add modifier to simulation
-		simulator.AddSimulationModifier(p_epithelium_and_forces_tracking_modifier);
-
 		//Fix the bottom row of cells
 		c_vector<double, 2> point, normal;
 
@@ -470,19 +440,19 @@ public:
 		MAKE_PTR_ARGS(FixedRegionPlaneBoundaryCondition<2>, p_bc1, (&cell_population, point, normal));
 		simulator.AddCellPopulationBoundaryCondition(p_bc1);
 
-		point(0) = -0.25;
-		point(1) = 0.0;
-		normal(0) = -1.0;
-		normal(1) = 0.0;
-		MAKE_PTR_ARGS(FixedRegionPlaneBoundaryCondition<2>, p_bc2, (&cell_population, point, normal));
-		simulator.AddCellPopulationBoundaryCondition(p_bc2);
-
-		point(0) = max_width - 0.75;
-		point(1) = 0.0;
-		normal(0) = 1.0;
-		normal(1) = 0.0;
-		MAKE_PTR_ARGS(FixedRegionPlaneBoundaryCondition<2>, p_bc3, (&cell_population, point, normal));
-		simulator.AddCellPopulationBoundaryCondition(p_bc3);
+//		point(0) = -0.25;
+//		point(1) = 0.0;
+//		normal(0) = -1.0;
+//		normal(1) = 0.0;
+//		MAKE_PTR_ARGS(FixedRegionPlaneBoundaryCondition<2>, p_bc2, (&cell_population, point, normal));
+//		simulator.AddCellPopulationBoundaryCondition(p_bc2);
+//
+//		point(0) = max_width - 0.75;
+//		point(1) = 0.0;
+//		normal(0) = 1.0;
+//		normal(1) = 0.0;
+//		MAKE_PTR_ARGS(FixedRegionPlaneBoundaryCondition<2>, p_bc3, (&cell_population, point, normal));
+//		simulator.AddCellPopulationBoundaryCondition(p_bc3);
 
 		simulator.Solve();
 	}
