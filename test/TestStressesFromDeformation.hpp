@@ -21,6 +21,7 @@
 #include "UniformCellCycleModel.hpp"
 #include "ContactInhibitionCellCycleModel.hpp"
 #include "StemCellProliferativeType.hpp"
+#include "TransitCellProliferativeType.hpp"
 #include "WildTypeCellMutationState.hpp"
 #include "FixedRegionPlaneBoundaryCondition.hpp" // Fixed-position boundary condition
 #include "FakePetscSetup.hpp" //Forbids tests running in parallel
@@ -41,7 +42,7 @@ class TestBoxModelWithNoDivision : public AbstractCellBasedTestSuite
 public:
 	void TestFlatToBuckledEpithelium()
 	{
-		double dt = 0.01; //Set dt
+		double dt = 0.005; //Set dt
 		double end_time = 1.0; //Set end time
 		double sampling_timestep = 0.25/dt;
 
@@ -52,7 +53,7 @@ public:
 
 		//Set the number of cells across and down for the array
 		unsigned cells_across = 20;
-		unsigned cells_up = 10;
+		unsigned cells_up = 6;
 		unsigned ghosts = 2; //Set the number of ghost node layers
 
 		//Set the basement membrane force parameters
@@ -134,8 +135,8 @@ public:
 				UniformCellCycleModel* p_cycle_model = new UniformCellCycleModel(); //Uniformly distributed cell cycle times
 				double birth_time = 12.0*RandomNumberGenerator::Instance()->ranf(); //We would like the birth time to be ~U(0,13) and set in the past
 				p_cycle_model->SetBirthTime(-birth_time);
-//				p_cycle_model->SetMinCellCycleDuration(10.0);
-//				p_cycle_model->SetMaxCellCycleDuration(14.0);
+				p_cycle_model->SetMinCellCycleDuration(10.0);
+				p_cycle_model->SetMaxCellCycleDuration(14.0);
 
 				CellPtr p_cell(new Cell(p_wildtype_state, p_cycle_model));
 				p_cell->InitialiseCellCycleModel(); // For paranoia really.
@@ -223,9 +224,9 @@ public:
 		double bm_stiffness = 12.0;
 		double target_curvature = 0.3;
 //
-		double left_boundary = 3.5;
+		double left_boundary = 4.0;
 		double right_boundary = 6.0;
-		double bottom_boundary = 4.0;
+		double bottom_boundary = 5.0;
 
 		double epithelial_epithelial_resting_spring_length = 1.2;
 
@@ -287,7 +288,7 @@ public:
 		//Create the vector of cells
 		//Create shared pointers for cell and mutation states
 		boost::shared_ptr<AbstractCellProperty> p_diff_type = CellPropertyRegistry::Instance()->Get<DifferentiatedCellProliferativeType>();
-		boost::shared_ptr<AbstractCellProperty> p_stem_type = CellPropertyRegistry::Instance()->Get<StemCellProliferativeType>();
+		boost::shared_ptr<AbstractCellProperty> p_stem_type = CellPropertyRegistry::Instance()->Get<TransitCellProliferativeType>();
 		boost::shared_ptr<AbstractCellProperty> p_wildtype_state = CellPropertyRegistry::Instance()->Get<WildTypeCellMutationState>();
 
 		//Create tissue of cells. Initially we set them all to be differentiated
@@ -393,7 +394,7 @@ public:
 		//Output data to vtk format so we can visualise it in Paraview
 		cell_population.SetWriteVtkAsPoints(true);
 		cell_population.AddPopulationWriter<VoronoiDataWriter>();
-        cell_population.AddCellWriter<GeneralisedCellAppliedForceWriter>();
+//        cell_population.AddCellWriter<GeneralisedCellAppliedForceWriter>();
 
 		OffLatticeSimulation<2> simulator(cell_population);
 
