@@ -1,4 +1,4 @@
-#ifndef TESTBOXMODELWITHNODIVISION_HPP_
+#ifndef TESTSTRESSES_HPP_
 #define TESTBOXMODELWITHNODIVISION_HPP_
 
 #include <cxxtest/TestSuite.h> //Needed for all test files
@@ -28,6 +28,7 @@
 #include "LinearSpringForceWithVariableRestLength.hpp"
 #include "NonPeriodicBasementMembraneForce.hpp" //BM force (based off Dunn et al. (2012))
 #include "OverlappingSpheresBasedBasementMembraneForce.hpp" //Overlapping spheres equivalent
+#include "VerticalCompressionForce.hpp" // Vertical compression force
 #include "AnoikisCellKiller.hpp" // Anoikis-based cell killer
 #include "PositionAndForceTrackingModifier.hpp" // Modifier to track the epithelium and resultant forces
 #include "GeneralisedCellAppliedForceWriter.hpp" // Modifier to write forces
@@ -43,8 +44,8 @@ public:
 	void TestFlatToBuckledEpithelium()
 	{
 		double dt = 0.005; //Set dt
-		double end_time = 1.0; //Set end time
-		double sampling_timestep = 0.25/dt;
+		double end_time = 20.0; //Set end time
+		double sampling_timestep = end_time/dt;
 
 		//Set all the spring stiffness variables
 		double epithelial_epithelial_stiffness = 15.0;
@@ -58,7 +59,7 @@ public:
 
 		//Set the basement membrane force parameters
 		double bm_stiffness = 10.0;
-		double target_curvature = 0.1;
+		double target_curvature = 0.0;
 
 		double epithelial_epithelial_resting_spring_length = 1.0;
 
@@ -132,11 +133,13 @@ public:
 			{
 
 				//Set stochastic duration based cell cycle
-				UniformCellCycleModel* p_cycle_model = new UniformCellCycleModel(); //Uniformly distributed cell cycle times
-				double birth_time = 12.0*RandomNumberGenerator::Instance()->ranf(); //We would like the birth time to be ~U(0,13) and set in the past
-				p_cycle_model->SetBirthTime(-birth_time);
-				p_cycle_model->SetMinCellCycleDuration(10.0);
-				p_cycle_model->SetMaxCellCycleDuration(14.0);
+				// UniformCellCycleModel* p_cycle_model = new UniformCellCycleModel(); //Uniformly distributed cell cycle times
+				// double birth_time = 12.0*RandomNumberGenerator::Instance()->ranf(); //We would like the birth time to be ~U(0,13) and set in the past
+				// p_cycle_model->SetBirthTime(-birth_time);
+				// p_cycle_model->SetMinCellCycleDuration(10.0);
+				// p_cycle_model->SetMaxCellCycleDuration(14.0);
+
+				NoCellCycleModel* p_cycle_model = new NoCellCycleModel;
 
 				CellPtr p_cell(new Cell(p_wildtype_state, p_cycle_model));
 				p_cell->InitialiseCellCycleModel(); // For paranoia really.
@@ -187,6 +190,15 @@ public:
 		p_bm_force->SetRightCryptBoundary(right_boundary);
 		simulator.AddForce(p_bm_force);
 
+		//Add vertical compression force
+		MAKE_PTR(NonPeriodicBasementMembraneForce, p_bm_force);
+		p_bm_force->SetBasementMembraneParameter(bm_stiffness); //Equivalent to beta in SJD's papers
+		p_bm_force->SetTargetCurvature(target_curvature); //This is equivalent to 1/R in SJD's papers
+		p_bm_force->ApplyForceToCrypt(true);
+		p_bm_force->SetLeftCryptBoundary(left_boundary);
+		p_bm_force->SetRightCryptBoundary(right_boundary);
+		simulator.AddForce(p_bm_force);
+
 		//Add anoikis-based cell killer
 		MAKE_PTR_ARGS(AnoikisCellKiller, p_anoikis_killer, (&cell_population));
 		simulator.AddCellKiller(p_anoikis_killer);
@@ -195,7 +207,7 @@ public:
 		c_vector<double, 2> point, normal;
 
 		point(0) = 0.0;
-		point(1) = 0.75;
+		point(1) = 0.6;
 		normal(0) = 0.0;
 		normal(1) = -1.0;
 		MAKE_PTR_ARGS(FixedRegionPlaneBoundaryCondition<2>, p_bc1, (&cell_population, point, normal));
@@ -203,12 +215,16 @@ public:
 
 		simulator.Solve();
 
+		//Tidying up
+		SimulationTime::Instance()->Destroy();
+		SimulationTime::Instance()->SetStartTime(0.0);
+
 	}
 	void TestBuckledCryptEpithelium()
 	{
-		double dt = 0.01; //Set dt
+		double dt = 0.005; //Set dt
 		double end_time = 10.0; //Set end time
-		double sampling_timestep = 0.25/dt;
+		double sampling_timestep = end_time/dt;
 
 		//Set all the spring stiffness variables
 		double epithelial_epithelial_stiffness = 45.0;
@@ -394,7 +410,7 @@ public:
 		//Output data to vtk format so we can visualise it in Paraview
 		cell_population.SetWriteVtkAsPoints(true);
 		cell_population.AddPopulationWriter<VoronoiDataWriter>();
-//        cell_population.AddCellWriter<GeneralisedCellAppliedForceWriter>();
+        cell_population.AddCellWriter<GeneralisedCellAppliedForceWriter>();
 
 		OffLatticeSimulation<2> simulator(cell_population);
 
@@ -423,8 +439,6 @@ public:
 		p_bm_force->SetTargetCurvature(target_curvature); //This is equivalent to 1/R in SJD's papers
 		p_bm_force->ApplyForceToCrypt(true);
 		p_bm_force->ApplyVerticallyDependentTargetCurvature(true);
-//		p_bm_force->SetLeftCryptBoundary(left_boundary);
-//		p_bm_force->SetRightCryptBoundary(right_boundary);
 		simulator.AddForce(p_bm_force);
 
 		//Add anoikis-based cell killer
@@ -440,20 +454,6 @@ public:
 		normal(1) = -1.0;
 		MAKE_PTR_ARGS(FixedRegionPlaneBoundaryCondition<2>, p_bc1, (&cell_population, point, normal));
 		simulator.AddCellPopulationBoundaryCondition(p_bc1);
-
-//		point(0) = -0.25;
-//		point(1) = 0.0;
-//		normal(0) = -1.0;
-//		normal(1) = 0.0;
-//		MAKE_PTR_ARGS(FixedRegionPlaneBoundaryCondition<2>, p_bc2, (&cell_population, point, normal));
-//		simulator.AddCellPopulationBoundaryCondition(p_bc2);
-//
-//		point(0) = max_width - 0.75;
-//		point(1) = 0.0;
-//		normal(0) = 1.0;
-//		normal(1) = 0.0;
-//		MAKE_PTR_ARGS(FixedRegionPlaneBoundaryCondition<2>, p_bc3, (&cell_population, point, normal));
-//		simulator.AddCellPopulationBoundaryCondition(p_bc3);
 
 		simulator.Solve();
 	}

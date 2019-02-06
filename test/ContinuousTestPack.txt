@@ -1,2 +1,1 @@
-TestBoxModelWithNoDivision.hpp
-TestStressesFromDeformation.hpp
+TestStressesInDeformationForVTModels.hpp
