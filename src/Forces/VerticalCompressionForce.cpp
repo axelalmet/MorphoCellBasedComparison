@@ -1,6 +1,9 @@
 #include "VerticalCompressionForce.hpp"
 #include "AbstractCellProperty.hpp"
 #include "DifferentiatedCellProliferativeType.hpp"
+#include "MeshBasedCellPopulation.hpp"
+#include "MeshBasedCellPopulationWithGhostNodes.hpp"
+#include "NodeBasedCellPopulation.hpp"
 #include "Debug.hpp"
 
 /*
@@ -89,7 +92,7 @@ void VerticalCompressionForce::AddForceContribution(AbstractCellPopulation<2>& r
         }
         else
         {
-            
+
             rCellPopulation.GetNode(node_index)->AddAppliedForceContribution(vertical_force);
 
         }
