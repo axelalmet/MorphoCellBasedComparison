@@ -21,11 +21,8 @@ class VerticalCompressionForce : public AbstractForce<2>
 
 private :
 
-    /** Right boundary to specify heterogeneous target curvature */
-    double mForceMagnitude;
-
-    /** Specifies whether or not we are only applying to epithelial cells */
-    bool mApplyOnlyToEpithelialCells;
+    /** Force magnitude */
+    double mForceMagnitude;;
 
     /** Needed for serialization. */
     friend class boost::serialization::access;
@@ -42,7 +39,6 @@ private :
         // If Archive is an input archive, then '&' resolves to '>>'
         archive & boost::serialization::base_object<AbstractForce<2> >(*this);
         archive & mForceMagnitude;
-        archive & mApplyOnlylToEpithelialCells;
 
     }
 
@@ -61,10 +57,6 @@ public :
     void SetForceMagnitude(double forceMagnitude);
 
     double GetForceMagnitude();
-
-    void ApplyForceOnlyToEpithelialCells(bool applyOnlyToEpithelialCells);
-
-    bool IsForceAppliedOnlyToEpithelialCells();
 
     /**
      * Overridden AddForceContribution method.

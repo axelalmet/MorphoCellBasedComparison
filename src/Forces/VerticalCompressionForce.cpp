@@ -17,8 +17,7 @@
  */
 VerticalCompressionForce::VerticalCompressionForce()
 :  AbstractForce<2>(),
-   mForceMagnitude(DOUBLE_UNSET),
-   mApplyOnlyToEpithelialCells(false)
+   mForceMagnitude(DOUBLE_UNSET)
    {
    }
 
@@ -29,142 +28,55 @@ VerticalCompressionForce::~VerticalCompressionForce()
 
 void VerticalCompressionForce::SetForceMagnitude(double forceMagnitude)
 {
-    mForceMagnitude = forceMagnitude;
+	mForceMagnitude = forceMagnitude;
 }
 
 double VerticalCompressionForce::GetForceMagnitude()
 {
-    return mForceMagnitude;
-}
-
-void VerticalCompressionForce::ApplyForceOnlyToEpithelialCells(bool applyOnlyToEpithelialCells)
-{
-    mApplyOnlyToEpithelialCells = applyOnlyToEpithelialCells;
-}
-
-bool VerticalCompressionForce::IsForceAppliedOnlyToEpithelialCells()
-{
-    return mApplyOnlyToEpithelialCells;
+	return mForceMagnitude;
 }
 
 //Method overriding the virtual method for AbstractForce. The crux of what really needs to be done.
 void VerticalCompressionForce::AddForceContribution(AbstractCellPopulation<2>& rCellPopulation)
 {
-    double force_magnitude = mForceMagnitude;
+	double force_magnitude = mForceMagnitude;
 
-    c_vector<double, 2> vertical_force;
-    vertical_force[0] = 0.0;
-    vertical_force[1] = -force_magnitude;
+	c_vector<double, 2> vertical_force;
+	vertical_force[0] = 0.0;
+	vertical_force[1] = -force_magnitude;
 
-    if (dynamic_cast<NodeBasedCellPopulation<2>*>(rCellPopulation))
-    {
-        NodeBasedCellPopulation<2>* p_tissue = static_cast<NodeBasedCellPopulation<2>*>(&rCellPopulation);
-
-            for (AbstractCellPopulation<2>::Iterator cell_iter = rCellPopulation.Begin();
-        cell_iter != rCellPopulation.End();
-        ++cell_iter)
+	if (dynamic_cast<MeshBasedCellPopulationWithGhostNodes<2>*>(&rCellPopulation))
 	{
+		for (AbstractCellPopulation<2>::Iterator cell_iter = rCellPopulation.Begin();
+				cell_iter != rCellPopulation.End();
+				++cell_iter)
+		{
 
-        // Get the node index
-        Node<2>* p_node = p_tissue->GetNodeCorrespondingToCell(*cell_iter);	// Pointer to node
-		unsigned node_index = p_node->GetIndex();
+			MeshBasedCellPopulationWithGhostNodes<2>* p_cell_population = static_cast<MeshBasedCellPopulationWithGhostNodes<2>*>(&rCellPopulation);
 
-        // Get the cell type
-        boost::shared_ptr<AbstractCellProperty> p_type = cell_iter->GetCellProliferativeType();
+			// Get the node index
+			Node<2>* p_node = p_cell_population->GetNodeCorrespondingToCell(*cell_iter);	// Pointer to node
+			unsigned node_index = p_node->GetIndex();
 
-        bool apply_only_to_epithelial_cells = IsForceAppliedOnlyToEpithelialCells();
+			// Get the cell type
+			boost::shared_ptr<AbstractCellProperty> p_type = cell_iter->GetCellProliferativeType();
 
-        if ( apply_only_to_epithelial_cells )
-        {
-            if (p_type->IsType<DifferentiatedCellProliferativeType>()==false)
-            {
-                rCellPopulation.GetNode(node_index)->AddAppliedForceContribution(vertical_force);
-            }
-        }
-        else
-        {
+			//Apply only to epithelial cells
 
-            rCellPopulation.GetNode(node_index)->AddAppliedForceContribution(vertical_force);
+			if (p_type->IsType<DifferentiatedCellProliferativeType>()==false)
+			{
+				rCellPopulation.GetNode(node_index)->AddAppliedForceContribution(vertical_force);
+			}
 
-        }
 
-    }
-    }
-    else if (dynamic_cast<MeshBasedCellPopulation<2>*>(rCellPopulation))
-    {
-        MeshBasedCellPopulation<2>* p_tissue = static_cast<MeshBasedCellPopulation<2>*>(&rCellPopulation);
-
-            for (AbstractCellPopulation<2>::Iterator cell_iter = rCellPopulation.Begin();
-        cell_iter != rCellPopulation.End();
-        ++cell_iter)
-	{
-
-        // Get the node index
-        Node<2>* p_node = p_tissue->GetNodeCorrespondingToCell(*cell_iter);	// Pointer to node
-		unsigned node_index = p_node->GetIndex();
-
-        // Get the cell type
-        boost::shared_ptr<AbstractCellProperty> p_type = cell_iter->GetCellProliferativeType();
-
-        bool apply_only_to_epithelial_cells = IsForceAppliedOnlyToEpithelialCells();
-
-        if ( apply_only_to_epithelial_cells )
-        {
-            if (p_type->IsType<DifferentiatedCellProliferativeType>()==false)
-            {
-                rCellPopulation.GetNode(node_index)->AddAppliedForceContribution(vertical_force);
-            }
-        }
-        else
-        {
-
-            rCellPopulation.GetNode(node_index)->AddAppliedForceContribution(vertical_force);
-
-        }
-
-    }
-    }
-    else if (dynamic_cast<MeshBasedCellPopulationWithGhostNodes<2>*>(rCellPopulation))
-    {	
-        MeshBasedCellPopulationWithGhostNodes<2>* p_tissue = static_cast<MeshBasedCellPopulationWithGhostNodes<2>*>(&rCellPopulation);
-
-            for (AbstractCellPopulation<2>::Iterator cell_iter = rCellPopulation.Begin();
-        cell_iter != rCellPopulation.End();
-        ++cell_iter)
-	{
-
-        // Get the node index
-        Node<2>* p_node = p_tissue->GetNodeCorrespondingToCell(*cell_iter);	// Pointer to node
-		unsigned node_index = p_node->GetIndex();
-
-        // Get the cell type
-        boost::shared_ptr<AbstractCellProperty> p_type = cell_iter->GetCellProliferativeType();
-
-        bool apply_only_to_epithelial_cells = IsForceAppliedOnlyToEpithelialCells();
-
-        if ( apply_only_to_epithelial_cells )
-        {
-            if (p_type->IsType<DifferentiatedCellProliferativeType>()==false)
-            {
-                rCellPopulation.GetNode(node_index)->AddAppliedForceContribution(vertical_force);
-            }
-        }
-        else
-        {
-
-            rCellPopulation.GetNode(node_index)->AddAppliedForceContribution(vertical_force);
-
-        }
-
-    }
-    }
+		}
+	}
 
 }
 
 void VerticalCompressionForce::OutputForceParameters(out_stream& rParamsFile)
 {
 	*rParamsFile <<  "\t\t\t<ForceMagnitude>"<<  mForceMagnitude << "</ForceMagnitude> \n";
-	*rParamsFile <<  "\t\t\t<ApplyOnlyToEpithelialCells>" << mApplyOnlyToEpithelialCells << "</ApplyOnlyToEpithelialCells> \n";
 
 	// Call direct parent class
 	AbstractForce<2>::OutputForceParameters(rParamsFile);

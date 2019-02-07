@@ -31,9 +31,10 @@ HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
 LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-*/
+ */
 
 #include "GeneralisedCellAppliedForceWriter.hpp"
+#include "DifferentiatedCellProliferativeType.hpp"
 #include "NodeBasedCellPopulation.hpp"
 #include "MeshBasedCellPopulation.hpp"
 #include "MeshBasedCellPopulationWithGhostNodes.hpp"
@@ -41,54 +42,60 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 template<unsigned ELEMENT_DIM, unsigned SPACE_DIM>
 GeneralisedCellAppliedForceWriter<ELEMENT_DIM, SPACE_DIM>::GeneralisedCellAppliedForceWriter()
-    : AbstractCellWriter<ELEMENT_DIM, SPACE_DIM>("GeneralisedCellAppliedForce.dat")
-{
-    this->mVtkVectorCellDataName = "Cell applied force";
-    this->mOutputScalarData = false;
-    this->mOutputVectorData = true;
-}
+: AbstractCellWriter<ELEMENT_DIM, SPACE_DIM>("GeneralisedCellAppliedForce.dat")
+  {
+	this->mVtkVectorCellDataName = "Cell applied force";
+	this->mOutputScalarData = false;
+	this->mOutputVectorData = true;
+  }
 
 template<unsigned ELEMENT_DIM, unsigned SPACE_DIM>
 c_vector<double, SPACE_DIM> GeneralisedCellAppliedForceWriter<ELEMENT_DIM, SPACE_DIM>::GetVectorCellDataForVtkOutput(CellPtr pCell, AbstractCellPopulation<ELEMENT_DIM, SPACE_DIM>* pCellPopulation)
 {
-    c_vector<double, SPACE_DIM> applied_force = scalar_vector<double>(SPACE_DIM, DOUBLE_UNSET);
+	c_vector<double, SPACE_DIM> applied_force = scalar_vector<double>(SPACE_DIM, DOUBLE_UNSET);
 
-    if (dynamic_cast<NodeBasedCellPopulation<SPACE_DIM>*>(pCellPopulation))
-    {
-        unsigned node_index = pCellPopulation->GetLocationIndexUsingCell(pCell);
-        applied_force = pCellPopulation->GetNode(node_index)->rGetAppliedForce();
-    }
-    else if (dynamic_cast<MeshBasedCellPopulation<SPACE_DIM>*>(pCellPopulation))
-    {
-        unsigned node_index = pCellPopulation->GetLocationIndexUsingCell(pCell);
-        applied_force = pCellPopulation->GetNode(node_index)->rGetAppliedForce();
-    }
-    else if (dynamic_cast<MeshBasedCellPopulationWithGhostNodes<SPACE_DIM>*>(pCellPopulation))
-    {
-        unsigned node_index = pCellPopulation->GetLocationIndexUsingCell(pCell);
-        applied_force = pCellPopulation->GetNode(node_index)->rGetAppliedForce();
-    }
+	if (dynamic_cast<NodeBasedCellPopulation<SPACE_DIM>*>(pCellPopulation))
+	{
+		unsigned node_index = pCellPopulation->GetLocationIndexUsingCell(pCell);
+		applied_force = pCellPopulation->GetNode(node_index)->rGetAppliedForce();
+	}
+	else if (dynamic_cast<MeshBasedCellPopulation<SPACE_DIM>*>(pCellPopulation))
+	{
+		unsigned node_index = pCellPopulation->GetLocationIndexUsingCell(pCell);
+		applied_force = pCellPopulation->GetNode(node_index)->rGetAppliedForce();
+	}
+	else if (dynamic_cast<MeshBasedCellPopulationWithGhostNodes<SPACE_DIM>*>(pCellPopulation))
+	{
+		unsigned node_index = pCellPopulation->GetLocationIndexUsingCell(pCell);
+		applied_force = pCellPopulation->GetNode(node_index)->rGetAppliedForce();
+	}
 
-    return applied_force;
+	return applied_force;
 }
 
 template<unsigned ELEMENT_DIM, unsigned SPACE_DIM>
 void GeneralisedCellAppliedForceWriter<ELEMENT_DIM, SPACE_DIM>::VisitCell(CellPtr pCell, AbstractCellPopulation<ELEMENT_DIM, SPACE_DIM>* pCellPopulation)
 {
-    unsigned location_index = pCellPopulation->GetLocationIndexUsingCell(pCell);
-    unsigned cell_id = pCell->GetCellId();
-    c_vector<double, SPACE_DIM> cell_location = pCellPopulation->GetLocationOfCellCentre(pCell);
-    c_vector<double, SPACE_DIM> applied_force = GetVectorCellDataForVtkOutput(pCell, pCellPopulation);
 
-    *this->mpOutStream << location_index << " " << cell_id << " ";
-    for (unsigned i=0; i<SPACE_DIM; i++)
-    {
-        *this->mpOutStream << cell_location[i] << " ";
-    }
-    for (unsigned i=0; i<SPACE_DIM; i++)
-    {
-        *this->mpOutStream << applied_force[i] << " ";
-    }
+	boost::shared_ptr<AbstractCellProperty> p_type = pCell->GetCellProliferativeType();
+
+	unsigned location_index = pCellPopulation->GetLocationIndexUsingCell(pCell);
+	unsigned cell_id = pCell->GetCellId();
+	c_vector<double, SPACE_DIM> cell_location = pCellPopulation->GetLocationOfCellCentre(pCell);
+	c_vector<double, SPACE_DIM> applied_force = GetVectorCellDataForVtkOutput(pCell, pCellPopulation);
+
+	if (p_type->IsType<DifferentiatedCellProliferativeType>() == false)
+	{
+		*this->mpOutStream << location_index << " " << cell_id << " ";
+		for (unsigned i=0; i<SPACE_DIM; i++)
+		{
+			*this->mpOutStream << cell_location[i] << " ";
+		}
+		for (unsigned i=0; i<SPACE_DIM; i++)
+		{
+			*this->mpOutStream << applied_force[i] << " ";
+		}
+	}
 }
 
 // Explicit instantiation
