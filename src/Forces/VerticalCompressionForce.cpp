@@ -43,7 +43,7 @@ void VerticalCompressionForce::AddForceContribution(AbstractCellPopulation<2>& r
 
 	c_vector<double, 2> vertical_force;
 	vertical_force[0] = 0.0;
-	vertical_force[1] = -force_magnitude;
+	vertical_force[1] = -1.0*force_magnitude;
 
 	if (dynamic_cast<MeshBasedCellPopulationWithGhostNodes<2>*>(&rCellPopulation))
 	{
@@ -55,17 +55,18 @@ void VerticalCompressionForce::AddForceContribution(AbstractCellPopulation<2>& r
 			MeshBasedCellPopulationWithGhostNodes<2>* p_cell_population = static_cast<MeshBasedCellPopulationWithGhostNodes<2>*>(&rCellPopulation);
 
 			// Get the node index
-			Node<2>* p_node = p_cell_population->GetNodeCorrespondingToCell(*cell_iter);	// Pointer to node
-			unsigned node_index = p_node->GetIndex();
+			unsigned node_index = rCellPopulation.GetLocationIndexUsingCell(*cell_iter);
 
 			// Get the cell type
 			boost::shared_ptr<AbstractCellProperty> p_type = cell_iter->GetCellProliferativeType();
 
 			//Apply only to epithelial cells
-
-			if (p_type->IsType<DifferentiatedCellProliferativeType>()==false)
+			if (!p_cell_population->IsGhostNode(node_index))
 			{
-				rCellPopulation.GetNode(node_index)->AddAppliedForceContribution(vertical_force);
+				if (p_type->template IsType<DifferentiatedCellProliferativeType>()==false)
+				{
+					rCellPopulation.GetNode(node_index)->AddAppliedForceContribution(vertical_force);
+				}
 			}
 
 

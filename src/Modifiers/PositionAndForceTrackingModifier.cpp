@@ -41,6 +41,7 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "MeshBasedCellPopulationWithGhostNodes.hpp"
 #include "NodeBasedCellPopulation.hpp"
 #include "CellId.hpp"
+#include "Debug.hpp"
 
 template<unsigned DIM>
 PositionAndForceTrackingModifier<DIM>::PositionAndForceTrackingModifier()
@@ -57,6 +58,9 @@ template<unsigned DIM>
 void PositionAndForceTrackingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopulation<DIM,DIM>& rCellPopulation)
 {
 	UpdateCellData(rCellPopulation);
+
+	CalculateModifierData(rCellPopulation);
+
 }
 
 template<unsigned DIM>
@@ -69,13 +73,13 @@ void PositionAndForceTrackingModifier<DIM>::SetupSolve(AbstractCellPopulation<DI
 	UpdateCellData(rCellPopulation);
 
 	// Create output file
-	OutputFileHandler output_file_handler( outputDirectory + "/", false);
+	OutputFileHandler output_file_handler(outputDirectory + "/", false);
 	mpDataFile = output_file_handler.OpenOutputFile("positionsandforces.dat");
 
 	//Initialise method
-	CalculateModifierData(rCellPopulation);
+//	CalculateModifierData(rCellPopulation);
 
-	*mpDataFile << "\n";
+	//	*mpDataFile << "\n";
 }
 
 template<unsigned DIM>
@@ -87,7 +91,7 @@ void PositionAndForceTrackingModifier<DIM>::UpdateCellData(AbstractCellPopulatio
 template<unsigned DIM>
 std::set<unsigned> PositionAndForceTrackingModifier<DIM>::GetNeighbouringNodeIndices(AbstractCellPopulation<DIM, DIM>& rCellPopulation, unsigned nodeIndex)
 {
-	MeshBasedCellPopulation<DIM>* p_tissue = static_cast<MeshBasedCellPopulation<DIM>*>(&rCellPopulation);
+	MeshBasedCellPopulation<DIM>* p_tissue = dynamic_cast<MeshBasedCellPopulation<DIM>*>(&rCellPopulation);
 
 	assert(!(p_tissue->IsGhostNode(nodeIndex)));
 
@@ -133,7 +137,7 @@ std::vector<unsigned> PositionAndForceTrackingModifier<DIM>::GetEpitheliumInArcL
 	// First, we obtain the epithelial indices and sort them by their x-coordinate. We assume that the left-most cell is the 'starting' cell.
 	if (dynamic_cast<MeshBasedCellPopulationWithGhostNodes<DIM>*>(&rCellPopulation))
 	{
-		MeshBasedCellPopulationWithGhostNodes<DIM>* p_cell_population = static_cast<MeshBasedCellPopulationWithGhostNodes<DIM>*>(&rCellPopulation);
+		MeshBasedCellPopulation<DIM>* p_tissue = dynamic_cast<MeshBasedCellPopulation<DIM>*>(&rCellPopulation);
 
 		for(typename AbstractCellPopulation<DIM>::Iterator cell_iter = rCellPopulation.Begin();
 				cell_iter != rCellPopulation.End();
@@ -141,20 +145,22 @@ std::vector<unsigned> PositionAndForceTrackingModifier<DIM>::GetEpitheliumInArcL
 		{
 
 			boost::shared_ptr<AbstractCellProperty> p_type = cell_iter->GetCellProliferativeType();
+			unsigned node_index = rCellPopulation.GetLocationIndexUsingCell(*cell_iter); // Get index
 
 			// Only consider epithelial cells
-			if  ( p_type->IsType<DifferentiatedCellProliferativeType>()==false )
+			if (!p_tissue->IsGhostNode(node_index))
 			{
-				Node<DIM>* p_node = p_cell_population->GetNodeCorrespondingToCell(*cell_iter);
+				if  ( p_type->template IsType<DifferentiatedCellProliferativeType>()==false )
+				{
 
-				double x = p_node->rGetLocation()[0]; // Get the x coordinate
-				unsigned node_index = p_node->GetIndex(); // Get index
+					double x = rCellPopulation.GetLocationOfCellCentre(*cell_iter)[0]; // Get the x coordinate
 
-				std::pair<double, unsigned> x_coordinate_and_index = std::make_pair(x, node_index);
+					std::pair<double, unsigned> x_coordinate_and_index = std::make_pair(x, node_index);
 
-				// Update the vector
-				epithelial_x_coordinates_and_indices.push_back(x_coordinate_and_index);
+					// Update the vector
+					epithelial_x_coordinates_and_indices.push_back(x_coordinate_and_index);
 
+				}
 			}
 		}
 
@@ -180,18 +186,21 @@ std::vector<unsigned> PositionAndForceTrackingModifier<DIM>::GetEpitheliumInArcL
 					++neighbour_iter)
 			{
 
-				boost::shared_ptr<AbstractCellProperty> p_type = p_cell_population->GetCellUsingLocationIndex(*neighbour_iter)->GetCellProliferativeType();
-
-				// If the neighbour is an epithelial cell and not in the epithelium index vector.
-				if ( (!p_type->IsType<DifferentiatedCellProliferativeType>())&&
-						(std::find(epithelium_in_order.begin(), epithelium_in_order.end(), *neighbour_iter) == epithelium_in_order.end()))
+				if (!p_tissue->IsGhostNode(*neighbour_iter))
 				{
-					// Update epithelium
-					epithelium_in_order.push_back(*neighbour_iter);
+					boost::shared_ptr<AbstractCellProperty> p_type = rCellPopulation.GetCellUsingLocationIndex(*neighbour_iter)->GetCellProliferativeType();
 
-					// Update iteration
-					current_index = *neighbour_iter;
-					cell_count += 1;
+					// If the neighbour is an epithelial cell and not already in the vector, add it.
+					if ( (!p_type->template IsType<DifferentiatedCellProliferativeType>())&&
+							(std::find(epithelium_in_order.begin(), epithelium_in_order.end(), *neighbour_iter) == epithelium_in_order.end()))
+					{
+						// Update epithelium
+						epithelium_in_order.push_back(*neighbour_iter);
+
+						// Update iteration
+						current_index = *neighbour_iter;
+						cell_count += 1;
+					}
 				}
 			}
 		}
@@ -209,25 +218,23 @@ void PositionAndForceTrackingModifier<DIM>::CalculateModifierData(AbstractCellPo
 
 	unsigned num_epithelial_cells = epithelial_indices.size();
 
-	// We will record the arc length, x coordinate, y coordinate, horizontal applied force, vertical applied forces,
-	// and tangent angles.
-
-	// We're collecting the data in this extremely inefficient	 format for the sake of writing it to the data.
+	// We're collecting the data in this extremely inefficient format for the sake of writing it to the data.
 	std::vector<double> x_coordinates;
 	std::vector<double> y_coordinates;
-	std::vector<double> arclengths;
-	std::vector<double> turning_angles;
 
 	if (dynamic_cast<MeshBasedCellPopulationWithGhostNodes<DIM>*>(&rCellPopulation))
 	{
-		MeshBasedCellPopulationWithGhostNodes<DIM>* p_cell_population = static_cast<MeshBasedCellPopulationWithGhostNodes<DIM>*>(&rCellPopulation);
-
-		for (unsigned i = 0; i < num_epithelial_cells; i++)
+		for (unsigned i = 1; i < num_epithelial_cells; i++)
 		{
 			// Get the location and force via the index
 			unsigned epithelial_node_index = epithelial_indices[i];
+			PRINT_VARIABLE(epithelial_node_index);
 
-			c_vector<double, 2> cell_location = p_cell_population->GetNode(epithelial_node_index)->rGetLocation();
+			c_vector<double, 2> cell_location = rCellPopulation.GetNode(epithelial_node_index)->rGetLocation();
+
+			PRINT_2_VARIABLES(cell_location[0], cell_location[1]);
+
+			c_vector<double, 2> applied_force = rCellPopulation.GetNode(epithelial_node_index)->rGetAppliedForce();
 
 			// Add the coordinates
 			x_coordinates.push_back(cell_location[0]);
@@ -235,50 +242,9 @@ void PositionAndForceTrackingModifier<DIM>::CalculateModifierData(AbstractCellPo
 
 		}
 
-		// Use the position to calculate the
-		double current_arclength = 0.0;
-		arclengths.push_back(current_arclength);
-
-		// Let's calculate the arc lengths and turning angles for this
-		for (unsigned i = 0; i < (num_epithelial_cells - 1); i++)
-		{
-			// Get the x coordinates
-			double x_first = x_coordinates[i];
-			double x_second = x_coordinates[i + 1];
-
-			// Get the y_coordinates
-			double y_first = y_coordinates[i];
-			double y_second =  y_coordinates[i + 1];
-
-			// Calculate the arclength increment and update the current arclength
-			double arclength_increment = sqrt(pow(x_second - x_first, 2.0) + pow(y_second - y_first, 2.0));
-
-			current_arclength += arclength_increment;
-			arclengths.push_back(current_arclength);
-
-			//Let's calculate the tangent angle as well (so we can work out the tangential and normal stresses)
-			c_vector<double, 2> tangent_vector;
-			tangent_vector[0] = x_second - x_first;
-			tangent_vector[1] = y_second - y_first;
-
-			tangent_vector /= norm_2(tangent_vector); // Normalise vector
-
-			// Calculate the angle and adjust for the quadrant
-			double angle = atan(tangent_vector[1]/tangent_vector[0]); //Get initial angle argument
-			turning_angles.push_back(angle);
-
-		}
-
 		*mpDataFile << SimulationTime::Instance()->GetTime() << "\n";
 
 		// Write everything to the file now
-
-		// arclength
-		for (unsigned i = 0; i < num_epithelial_cells; i++)
-		{
-			*mpDataFile << arclengths[i] << "\t";
-		}
-		*mpDataFile << "\n";
 
 		// x coordinates
 		for (unsigned i = 0; i < num_epithelial_cells; i++)
@@ -294,13 +260,6 @@ void PositionAndForceTrackingModifier<DIM>::CalculateModifierData(AbstractCellPo
 		}
 		*mpDataFile << "\n";
 
-		// vertical forces
-		for (unsigned i = 0; i < (num_epithelial_cells - 1); i++)
-		{
-			*mpDataFile << turning_angles[i] << "\t";
-		}
-		*mpDataFile << "\n";
-
 	}
 
 }
@@ -311,7 +270,7 @@ void PositionAndForceTrackingModifier<DIM>::UpdateAtEndOfSolve(AbstractCellPopul
 
 	UpdateCellData(rCellPopulation);
 
-	CalculateModifierData(rCellPopulation);
+//	CalculateModifierData(rCellPopulation);
 
 	// Close output file.
 	mpDataFile->close();

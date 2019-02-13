@@ -90,40 +90,38 @@ void FixedRegionPlaneBoundaryCondition<DIM>::ImposeBoundaryCondition(const std::
 
 				if (current_signed_distance > 0.0)
 				{
-					//                	//If the cell outside of the boundary has not been given a CellLabel
-					//                	if (!cell_iter->template HasCellProperty<CellLabel>())
-					//                	{
-					//                			if (mUseJiggledNodesOnPlane)
-					//                			{
-					//                				//Assign nearest point, which is just the old location
-					//                				nearest_point = current_location;
-					//
-					//                				//Differentiate cell, otherwise something weird will happen with proliferation
-					//                				// boost::shared_ptr<AbstractCellProperty> p_diff_type = CellPropertyRegistry::Instance()->Get<DifferentiatedCellProliferativeType>();
-					//                				// cell_iter->SetCellProliferativeType(p_diff_type);
-					//
-					//                				//Label the fixed cell for visualisation
-					//                				boost::shared_ptr<AbstractCellProperty> p_label = CellPropertyRegistry::Instance()->Get<CellLabel>();
-					//                				cell_iter->AddCellProperty(p_label);
-					//                			}
-					//                			else
-					//                			{
-					//                				//Assign nearest point, which is just the current location
-					//                				nearest_point = current_location;
-					//
-					//                				//Differentiate cell, otherwise something weird will happen with proliferation
-					//                				// boost::shared_ptr<AbstractCellProperty> p_diff_type = CellPropertyRegistry::Instance()->Get<DifferentiatedCellProliferativeType>();
-					//                				// cell_iter->SetCellProliferativeType(p_diff_type);
-					//
-					//                				//Label the fixed cell for visualisation
-					//                				boost::shared_ptr<AbstractCellProperty> p_label = CellPropertyRegistry::Instance()->Get<CellLabel>();
-					//                				cell_iter->AddCellProperty(p_label);
-					//                			}
-					//                			p_node->rGetModifiableLocation() = nearest_point;
-					//                	}
-					//                	else //Otherwise it will already have one, so don't re-label it
-					//                	{
-					if (cell_iter->template HasCellProperty<CellLabel>())
+					//If the cell outside of the boundary has not been given a CellLabel
+					if (!cell_iter->template HasCellProperty<CellLabel>())
+					{
+						if (mUseJiggledNodesOnPlane)
+						{
+							//Assign nearest point, which is just the old location
+							nearest_point = current_location;
+
+							//Differentiate cell, otherwise something weird will happen with proliferation
+							boost::shared_ptr<AbstractCellProperty> p_diff_type = CellPropertyRegistry::Instance()->Get<DifferentiatedCellProliferativeType>();
+							cell_iter->SetCellProliferativeType(p_diff_type);
+
+							//Label the fixed cell for visualisation
+							boost::shared_ptr<AbstractCellProperty> p_label = CellPropertyRegistry::Instance()->Get<CellLabel>();
+							cell_iter->AddCellProperty(p_label);
+						}
+						else
+						{
+							//Assign nearest point, which is just the current location
+							nearest_point = current_location;
+
+							//Differentiate cell, otherwise something weird will happen with proliferation
+							boost::shared_ptr<AbstractCellProperty> p_diff_type = CellPropertyRegistry::Instance()->Get<DifferentiatedCellProliferativeType>();
+							cell_iter->SetCellProliferativeType(p_diff_type);
+
+							//Label the fixed cell for visualisation
+							boost::shared_ptr<AbstractCellProperty> p_label = CellPropertyRegistry::Instance()->Get<CellLabel>();
+							cell_iter->AddCellProperty(p_label);
+						}
+						p_node->rGetModifiableLocation() = nearest_point;
+					}
+					else //Otherwise it will already have one, so don't re-label it
 					{
 						if (previous_signed_distance > 0.0)
 						{
@@ -154,7 +152,6 @@ void FixedRegionPlaneBoundaryCondition<DIM>::ImposeBoundaryCondition(const std::
 							p_node->rGetModifiableLocation() = nearest_point;
 						}
 					}
-					//                	}
 				}
 				else if ( (current_signed_distance < 0.0 )&&(cell_iter->template HasCellProperty<CellLabel>()) )
 				{
@@ -201,7 +198,7 @@ void FixedRegionPlaneBoundaryCondition<DIM>::ImposeBoundaryCondition(const std::
 				if (current_signed_distance > 0.0)
 				{
 					//If the cell outside of the boundary has not been given a CellLabel
-					if (!cell_iter->template HasCellProperty<CellLabel>())
+					if (cell_iter->template HasCellProperty<CellLabel>())
 					{
 						if (mUseJiggledNodesOnPlane)
 						{
@@ -212,9 +209,9 @@ void FixedRegionPlaneBoundaryCondition<DIM>::ImposeBoundaryCondition(const std::
 							// boost::shared_ptr<AbstractCellProperty> p_diff_type = CellPropertyRegistry::Instance()->Get<DifferentiatedCellProliferativeType>();
 							// cell_iter->SetCellProliferativeType(p_diff_type);
 
-							//Label the fixed cell for visualisation
-							boost::shared_ptr<AbstractCellProperty> p_label = CellPropertyRegistry::Instance()->Get<CellLabel>();
-							cell_iter->AddCellProperty(p_label);
+							//							//Label the fixed cell for visualisation
+							//							boost::shared_ptr<AbstractCellProperty> p_label = CellPropertyRegistry::Instance()->Get<CellLabel>();
+							//							cell_iter->AddCellProperty(p_label);
 						}
 						else
 						{
@@ -226,8 +223,8 @@ void FixedRegionPlaneBoundaryCondition<DIM>::ImposeBoundaryCondition(const std::
 							// cell_iter->SetCellProliferativeType(p_diff_type);
 
 							//Label the fixed cell for visualisation
-							boost::shared_ptr<AbstractCellProperty> p_label = CellPropertyRegistry::Instance()->Get<CellLabel>();
-							cell_iter->AddCellProperty(p_label);
+							//							boost::shared_ptr<AbstractCellProperty> p_label = CellPropertyRegistry::Instance()->Get<CellLabel>();
+							//							cell_iter->AddCellProperty(p_label);
 						}
 						p_node->rGetModifiableLocation() = nearest_point;
 					}
@@ -422,11 +419,11 @@ bool FixedRegionPlaneBoundaryCondition<DIM>::VerifyBoundaryCondition()
 
 			c_vector<double, DIM> plane_to_cell_location = this->mpCellPopulation->rGetMesh().GetVectorFromAtoB(mPointOnPlane, cell_location);
 
-			if ( (inner_prod(plane_to_cell_location, mNormalToPlane) > 0.0)&&(!cell_iter->template HasCellProperty<CellLabel>()) )
-			{
-				condition_satisfied = false;
-				break;
-			}
+            if ( (inner_prod(plane_to_cell_location, mNormalToPlane) > 0.0)&&(!cell_iter->template HasCellProperty<CellLabel>()) )
+            {
+                condition_satisfied = false;
+                break;
+            }
 		}
 	}
 

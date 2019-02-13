@@ -84,7 +84,7 @@ void GeneralisedCellAppliedForceWriter<ELEMENT_DIM, SPACE_DIM>::VisitCell(CellPt
 	c_vector<double, SPACE_DIM> cell_location = pCellPopulation->GetLocationOfCellCentre(pCell);
 	c_vector<double, SPACE_DIM> applied_force = GetVectorCellDataForVtkOutput(pCell, pCellPopulation);
 
-	if (p_type->IsType<DifferentiatedCellProliferativeType>() == false)
+	if (p_type->template IsType<DifferentiatedCellProliferativeType>() == false)
 	{
 		*this->mpOutStream << location_index << " " << cell_id << " ";
 		for (unsigned i=0; i<SPACE_DIM; i++)
