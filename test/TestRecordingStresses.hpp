@@ -226,11 +226,23 @@ public:
 		c_vector<double, 2> point, normal;
 
 		point(0) = 0.0;
-		point(1) = 0.75;
+		point(1) = 0.25;
 		normal(0) = 0.0;
 		normal(1) = -1.0;
 		MAKE_PTR_ARGS(FixedRegionPlaneBoundaryCondition<2>, p_bc1, (&cell_population, point, normal));
 		simulator.AddCellPopulationBoundaryCondition(p_bc1);
+
+		// Let's clear the forces for paranoia's sake
+		for (AbstractCellPopulation<2>::Iterator cell_iter = simulator.rGetCellPopulation().Begin();
+		cell_iter != simulator.rGetCellPopulation().End(); ++cell_iter)
+		{
+			unsigned index = simulator.rGetCellPopulation().GetLocationIndexUsingCell(*cell_iter);
+
+			Node<2>* p_node = simulator.rGetCellPopulation().GetNode(index);
+
+			p_node->ClearAppliedForce();
+
+		}
 
 		simulator.Solve();
 
