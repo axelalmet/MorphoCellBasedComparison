@@ -76,6 +76,28 @@ void PositionAndForceTrackingModifier<DIM>::SetupSolve(AbstractCellPopulation<DI
 	OutputFileHandler output_file_handler(outputDirectory + "/", false);
 	mpDataFile = output_file_handler.OpenOutputFile("positionsandforces.dat");
 
+	if (dynamic_cast<MeshBasedCellPopulationWithGhostNodes<DIM>*>(&rCellPopulation))
+		{
+			MeshBasedCellPopulation<DIM>* p_tissue = dynamic_cast<MeshBasedCellPopulation<DIM>*>(&rCellPopulation);
+
+			for(typename AbstractCellPopulation<DIM>::Iterator cell_iter = rCellPopulation.Begin();
+					cell_iter != rCellPopulation.End();
+					++cell_iter)
+			{
+
+				boost::shared_ptr<AbstractCellProperty> p_type = cell_iter->GetCellProliferativeType();
+				unsigned node_index = rCellPopulation.GetLocationIndexUsingCell(*cell_iter); // Get index
+
+				// Only consider epithelial cells
+				if (!p_tissue->IsGhostNode(node_index))
+				{
+					Node<DIM>* p_node = rCellPopulation.GetNode(node_index);
+					p_node->ClearAppliedForce();
+				}
+			}
+
+		}
+
 	//Initialise method
 //	CalculateModifierData(rCellPopulation);
 
@@ -234,7 +256,18 @@ void PositionAndForceTrackingModifier<DIM>::CalculateModifierData(AbstractCellPo
 
 			PRINT_2_VARIABLES(cell_location[0], cell_location[1]);
 
+			std::vector<double> node_attributes = rCellPopulation.GetNode(epithelial_node_index)->rGetNodeAttributes();
+
+			PRINT_2_VARIABLES(cell_location[0], cell_location[1]);
+
+
+			for (unsigned j = 0; j < node_attributes.size(); j++)
+			{
+				PRINT_VARIABLE(node_attributes[j]);
+			}
+
 			c_vector<double, 2> applied_force = rCellPopulation.GetNode(epithelial_node_index)->rGetAppliedForce();
+
 
 			// Add the coordinates
 			x_coordinates.push_back(cell_location[0]);

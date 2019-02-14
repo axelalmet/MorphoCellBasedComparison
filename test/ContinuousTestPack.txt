@@ -1,1 +1,2 @@
 TestStressesInDeformationForVTModels.hpp
+TestRecordingStresses.hpp

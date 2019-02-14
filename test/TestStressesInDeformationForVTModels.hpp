@@ -41,7 +41,7 @@ static const std::string M_OUTPUT_DIRECTORY = "MeasuringStresses";
 static const double M_DT = 0.005;
 static const double M_END_TIME = 20.0;
 static const double M_SECOND_END_TIME = 20.0;
-static const double M_SAMPLING_TIMESTEP = 0.25*M_END_TIME/M_DT;
+static const double M_SAMPLING_TIMESTEP = 0.25/M_DT;
 
 class TestStressesInDeformationForFlatEpithelium : public AbstractCellBasedTestSuite
 {
