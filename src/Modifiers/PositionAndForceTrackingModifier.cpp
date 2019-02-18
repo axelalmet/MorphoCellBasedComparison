@@ -76,27 +76,27 @@ void PositionAndForceTrackingModifier<DIM>::SetupSolve(AbstractCellPopulation<DI
 	OutputFileHandler output_file_handler(outputDirectory + "/", false);
 	mpDataFile = output_file_handler.OpenOutputFile("positionsandforces.dat");
 
-	if (dynamic_cast<MeshBasedCellPopulationWithGhostNodes<DIM>*>(&rCellPopulation))
-		{
-			MeshBasedCellPopulation<DIM>* p_tissue = dynamic_cast<MeshBasedCellPopulation<DIM>*>(&rCellPopulation);
-
-			for(typename AbstractCellPopulation<DIM>::Iterator cell_iter = rCellPopulation.Begin();
-					cell_iter != rCellPopulation.End();
-					++cell_iter)
-			{
-
-				boost::shared_ptr<AbstractCellProperty> p_type = cell_iter->GetCellProliferativeType();
-				unsigned node_index = rCellPopulation.GetLocationIndexUsingCell(*cell_iter); // Get index
-
-				// Only consider epithelial cells
-				if (!p_tissue->IsGhostNode(node_index))
-				{
-					Node<DIM>* p_node = rCellPopulation.GetNode(node_index);
-					p_node->ClearAppliedForce();
-				}
-			}
-
-		}
+//	if (dynamic_cast<MeshBasedCellPopulationWithGhostNodes<DIM>*>(&rCellPopulation))
+//		{
+//			MeshBasedCellPopulation<DIM>* p_tissue = static_cast<MeshBasedCellPopulation<DIM>*>(&rCellPopulation);
+//
+//			for(typename AbstractCellPopulation<DIM>::Iterator cell_iter = rCellPopulation.Begin();
+//					cell_iter != rCellPopulation.End();
+//					++cell_iter)
+//			{
+//
+//				boost::shared_ptr<AbstractCellProperty> p_type = cell_iter->GetCellProliferativeType();
+//				unsigned node_index = rCellPopulation.GetLocationIndexUsingCell(*cell_iter); // Get index
+//
+//				// Only consider epithelial cells
+//				if (!p_tissue->IsGhostNode(node_index))
+//				{
+//					Node<DIM>* p_node = rCellPopulation.GetNode(node_index);
+//					p_node->ClearAppliedForce();
+//				}
+//			}
+//
+//		}
 
 	//Initialise method
 //	CalculateModifierData(rCellPopulation);
@@ -113,7 +113,9 @@ void PositionAndForceTrackingModifier<DIM>::UpdateCellData(AbstractCellPopulatio
 template<unsigned DIM>
 std::set<unsigned> PositionAndForceTrackingModifier<DIM>::GetNeighbouringNodeIndices(AbstractCellPopulation<DIM, DIM>& rCellPopulation, unsigned nodeIndex)
 {
-	MeshBasedCellPopulation<DIM>* p_tissue = dynamic_cast<MeshBasedCellPopulation<DIM>*>(&rCellPopulation);
+	MeshBasedCellPopulation<DIM>* p_tissue = static_cast<MeshBasedCellPopulation<DIM>*>(&rCellPopulation);
+
+	p_tissue->CreateVoronoiTessellation();
 
 	assert(!(p_tissue->IsGhostNode(nodeIndex)));
 
@@ -159,7 +161,9 @@ std::vector<unsigned> PositionAndForceTrackingModifier<DIM>::GetEpitheliumInArcL
 	// First, we obtain the epithelial indices and sort them by their x-coordinate. We assume that the left-most cell is the 'starting' cell.
 	if (dynamic_cast<MeshBasedCellPopulationWithGhostNodes<DIM>*>(&rCellPopulation))
 	{
-		MeshBasedCellPopulation<DIM>* p_tissue = dynamic_cast<MeshBasedCellPopulation<DIM>*>(&rCellPopulation);
+		MeshBasedCellPopulation<DIM>* p_tissue = static_cast<MeshBasedCellPopulation<DIM>*>(&rCellPopulation);
+
+		p_tissue->CreateVoronoiTessellation();
 
 		for(typename AbstractCellPopulation<DIM>::Iterator cell_iter = rCellPopulation.Begin();
 				cell_iter != rCellPopulation.End();
@@ -246,7 +250,11 @@ void PositionAndForceTrackingModifier<DIM>::CalculateModifierData(AbstractCellPo
 
 	if (dynamic_cast<MeshBasedCellPopulationWithGhostNodes<DIM>*>(&rCellPopulation))
 	{
-		for (unsigned i = 1; i < num_epithelial_cells; i++)
+		MeshBasedCellPopulation<DIM>* p_tissue = static_cast<MeshBasedCellPopulation<DIM>*>(&rCellPopulation);
+
+		p_tissue->CreateVoronoiTessellation();
+
+		for (unsigned i = 0; i < num_epithelial_cells; i++)
 		{
 			// Get the location and force via the index
 			unsigned epithelial_node_index = epithelial_indices[i];
@@ -266,7 +274,7 @@ void PositionAndForceTrackingModifier<DIM>::CalculateModifierData(AbstractCellPo
 				PRINT_VARIABLE(node_attributes[j]);
 			}
 
-			c_vector<double, 2> applied_force = rCellPopulation.GetNode(epithelial_node_index)->rGetAppliedForce();
+			c_vector<double, 2> applied_force = p_tissue->GetNode(epithelial_node_index)->rGetAppliedForce();
 
 
 			// Add the coordinates

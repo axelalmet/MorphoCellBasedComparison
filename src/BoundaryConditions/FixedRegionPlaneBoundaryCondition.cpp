@@ -96,28 +96,28 @@ void FixedRegionPlaneBoundaryCondition<DIM>::ImposeBoundaryCondition(const std::
 						if (mUseJiggledNodesOnPlane)
 						{
 							//Assign nearest point, which is just the old location
-							nearest_point = current_location;
+							nearest_point = previous_location;
 
-							//Differentiate cell, otherwise something weird will happen with proliferation
-							boost::shared_ptr<AbstractCellProperty> p_diff_type = CellPropertyRegistry::Instance()->Get<DifferentiatedCellProliferativeType>();
-							cell_iter->SetCellProliferativeType(p_diff_type);
-
-							//Label the fixed cell for visualisation
-							boost::shared_ptr<AbstractCellProperty> p_label = CellPropertyRegistry::Instance()->Get<CellLabel>();
-							cell_iter->AddCellProperty(p_label);
+//							//Differentiate cell, otherwise something weird will happen with proliferation
+//							boost::shared_ptr<AbstractCellProperty> p_diff_type = CellPropertyRegistry::Instance()->Get<DifferentiatedCellProliferativeType>();
+//							cell_iter->SetCellProliferativeType(p_diff_type);
+//
+//							//Label the fixed cell for visualisation
+//							boost::shared_ptr<AbstractCellProperty> p_label = CellPropertyRegistry::Instance()->Get<CellLabel>();
+//							cell_iter->AddCellProperty(p_label);
 						}
 						else
 						{
 							//Assign nearest point, which is just the current location
-							nearest_point = current_location;
+							nearest_point = previous_location;
 
 							//Differentiate cell, otherwise something weird will happen with proliferation
-							boost::shared_ptr<AbstractCellProperty> p_diff_type = CellPropertyRegistry::Instance()->Get<DifferentiatedCellProliferativeType>();
-							cell_iter->SetCellProliferativeType(p_diff_type);
-
-							//Label the fixed cell for visualisation
-							boost::shared_ptr<AbstractCellProperty> p_label = CellPropertyRegistry::Instance()->Get<CellLabel>();
-							cell_iter->AddCellProperty(p_label);
+//							boost::shared_ptr<AbstractCellProperty> p_diff_type = CellPropertyRegistry::Instance()->Get<DifferentiatedCellProliferativeType>();
+//							cell_iter->SetCellProliferativeType(p_diff_type);
+//
+//							//Label the fixed cell for visualisation
+//							boost::shared_ptr<AbstractCellProperty> p_label = CellPropertyRegistry::Instance()->Get<CellLabel>();
+//							cell_iter->AddCellProperty(p_label);
 						}
 						p_node->rGetModifiableLocation() = nearest_point;
 					}
@@ -158,14 +158,12 @@ void FixedRegionPlaneBoundaryCondition<DIM>::ImposeBoundaryCondition(const std::
 					if (mUseJiggledNodesOnPlane)
 					{
 						//Assign nearest point, which is just the old location
-						typename std::map<Node<DIM>*, c_vector<double, DIM> >::const_iterator it = rOldLocations.find(p_node);
-						nearest_point = it->second;
+						nearest_point = previous_location;
 					}
 					else
 					{
 						//Assign nearest point, which is just the old location
-						typename std::map<Node<DIM>*, c_vector<double, DIM> >::const_iterator it = rOldLocations.find(p_node);
-						nearest_point = it->second;
+						nearest_point = previous_location;
 					}
 					p_node->rGetModifiableLocation() = nearest_point;
 				}

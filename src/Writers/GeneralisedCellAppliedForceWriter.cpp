@@ -39,6 +39,7 @@ OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "MeshBasedCellPopulation.hpp"
 #include "MeshBasedCellPopulationWithGhostNodes.hpp"
 #include "UblasVectorInclude.hpp"
+#include "Debug.hpp"
 
 template<unsigned ELEMENT_DIM, unsigned SPACE_DIM>
 GeneralisedCellAppliedForceWriter<ELEMENT_DIM, SPACE_DIM>::GeneralisedCellAppliedForceWriter()
@@ -54,18 +55,25 @@ c_vector<double, SPACE_DIM> GeneralisedCellAppliedForceWriter<ELEMENT_DIM, SPACE
 {
 	c_vector<double, SPACE_DIM> applied_force = scalar_vector<double>(SPACE_DIM, DOUBLE_UNSET);
 
+	PRINT_VARIABLE(1.0);
+
 	if (dynamic_cast<NodeBasedCellPopulation<SPACE_DIM>*>(pCellPopulation))
 	{
+		PRINT_VARIABLE(2.0);
+
 		unsigned node_index = pCellPopulation->GetLocationIndexUsingCell(pCell);
 		applied_force = pCellPopulation->GetNode(node_index)->rGetAppliedForce();
 	}
 	else if (dynamic_cast<MeshBasedCellPopulation<SPACE_DIM>*>(pCellPopulation))
 	{
+		PRINT_VARIABLE(3.0);
+
 		unsigned node_index = pCellPopulation->GetLocationIndexUsingCell(pCell);
 		applied_force = pCellPopulation->GetNode(node_index)->rGetAppliedForce();
 	}
 	else if (dynamic_cast<MeshBasedCellPopulationWithGhostNodes<SPACE_DIM>*>(pCellPopulation))
 	{
+		PRINT_VARIABLE(4.0);
 		unsigned node_index = pCellPopulation->GetLocationIndexUsingCell(pCell);
 		applied_force = pCellPopulation->GetNode(node_index)->rGetAppliedForce();
 	}

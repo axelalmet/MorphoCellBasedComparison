@@ -24,7 +24,8 @@ OverlappingSpheresBasedBasementMembraneForce::OverlappingSpheresBasedBasementMem
    mUsePositionDependentMembraneForce(false),
    mApplyForceToCrypt(true),
    mMembraneForceMultiplier(DOUBLE_UNSET),
-   mCutOffRadius(1.5)
+   mCutOffRadius(1.5),
+   mApplyPeriodicForce(false)
    {
 	// Sets up output file
 	//	OutputFileHandler output_file_handler("CurvatureData/", false);
@@ -108,6 +109,16 @@ double OverlappingSpheresBasedBasementMembraneForce::GetCutOffRadius()
 void OverlappingSpheresBasedBasementMembraneForce::SetCutOffRadius(double cutOffRadius)
 {
 	mCutOffRadius = cutOffRadius;
+}
+
+void OverlappingSpheresBasedBasementMembraneForce::ApplyPeriodicForce(bool applyPeriodicForce)
+{
+	mApplyPeriodicForce = applyPeriodicForce;
+}
+
+bool OverlappingSpheresBasedBasementMembraneForce::IsPeriodicForceApplied()
+{
+	return mApplyPeriodicForce;
 }
 
 
@@ -624,6 +635,7 @@ void OverlappingSpheresBasedBasementMembraneForce::OutputForceParameters(out_str
 	*rParamsFile <<  "\t\t\t<RightBoundary>"<<  mRightBoundary << "</RightBoundary> \n" ;
 	*rParamsFile <<  "\t\t\t<UsePositionDependentMembraneForce>"<<  mUsePositionDependentMembraneForce << "</UsePositionDependentMembraneForce> \n" ;
 	*rParamsFile <<  "\t\t\t<MembraneForceMultiplier>"<<  mMembraneForceMultiplier << "</MembraneForceMultiplier> \n" ;
+	*rParamsFile <<  "\t\t\t<ApplyPeriodicForce>" << mApplyPeriodicForce << "</ApplyPeriodicForce> \n";
 
 	// Call direct parent class
 	AbstractForce<2>::OutputForceParameters(rParamsFile);

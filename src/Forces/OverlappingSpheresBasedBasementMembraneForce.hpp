@@ -48,6 +48,8 @@ private :
     /** The cut off radius for defining neighbouring nodes */
     double mCutOffRadius;
 
+    bool mApplyPeriodicForce;
+
     /** Needed for serialization. */
     friend class boost::serialization::access;
     /**
@@ -70,6 +72,7 @@ private :
         archive & mUsePositionDependentMembraneForce;
         archive & mMembraneForceMultiplier;
         archive & mCutOffRadius;
+        archive & mApplyPeriodicForce;
     }
 
 public :
@@ -146,6 +149,11 @@ public :
 
     /*Set method for cut off radius */
     void SetCutOffRadius(double cutOffRadius);
+
+    /* Get method for whether we apply a periodic force */
+    void ApplyPeriodicForce(bool applyPeriodicForce);
+
+    bool IsPeriodicForceApplied();
 
     /* Removing duplicated entries of a vector
      */

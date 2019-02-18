@@ -39,8 +39,8 @@
 
 static const std::string M_OUTPUT_DIRECTORY = "RecordingStresses";
 static const double M_DT = 0.005;
-static const double M_END_TIME = 1.0;
-static const double M_SAMPLING_TIMESTEP = M_END_TIME/M_DT;
+static const double M_END_TIME = 10.0;
+static const double M_SAMPLING_TIMESTEP = 0.1*M_END_TIME/M_DT;
 
 class TestStressesInDeformationForFlatEpithelium : public AbstractCellBasedTestSuite
 {
@@ -64,7 +64,7 @@ public:
 
 		double epithelial_epithelial_resting_spring_length = 1.0;
 
-		double vertical_force_magnitude = 0.0;
+		double vertical_force_magnitude = 20.0;
 
 		//Generate the periodic mesh
 		CylindricalHoneycombMeshGenerator generator(cells_across, cells_up, ghosts);
@@ -176,7 +176,7 @@ public:
 		//Output data to vtk format so we can visualise it in Paraview
 		cell_population.SetWriteVtkAsPoints(true);
 		cell_population.AddPopulationWriter<VoronoiDataWriter>();
-		//			cell_population.AddCellWriter<GeneralisedCellAppliedForceWriter>();
+//		cell_population.AddCellWriter<GeneralisedCellAppliedForceWriter>();
 
 		OffLatticeSimulation<2> simulator(cell_population);
 
@@ -209,18 +209,18 @@ public:
 		p_bm_force->SetRightCryptBoundary(right_boundary);
 		simulator.AddForce(p_bm_force);
 
-		//			Add vertical compression force
-		//			MAKE_PTR(VerticalCompressionForce, p_vertical_force);
-		//			p_vertical_force->SetForceMagnitude(vertical_force_magnitude);
-		//			simulator.AddForce(p_vertical_force);
+//		Add vertical compression force
+		MAKE_PTR(VerticalCompressionForce, p_vertical_force);
+		p_vertical_force->SetForceMagnitude(vertical_force_magnitude);
+		simulator.AddForce(p_vertical_force);
 
 		//Add anoikis-based cell killer
 		MAKE_PTR_ARGS(AnoikisCellKiller, p_anoikis_killer, (&cell_population));
 		simulator.AddCellKiller(p_anoikis_killer);
 
-		// Add modifier to track positions
-		MAKE_PTR(PositionAndForceTrackingModifier<2>, p_position_tracking_modifier);
-		simulator.AddSimulationModifier(p_position_tracking_modifier);
+//		// Add modifier to track positions
+//		MAKE_PTR(PositionAndForceTrackingModifier<2>, p_position_tracking_modifier);
+//		simulator.AddSimulationModifier(p_position_tracking_modifier);
 
 		//			Fix the bottom row of cells
 		c_vector<double, 2> point, normal;
@@ -240,7 +240,7 @@ public:
 
 			Node<2>* p_node = simulator.rGetCellPopulation().GetNode(index);
 
-			p_node->ClearAppliedForce();
+			p_node->AddAppliedForceContribution(zero_vector<double>(2));
 
 		}
 
