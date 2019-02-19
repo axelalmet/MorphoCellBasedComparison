@@ -1,5 +1,5 @@
-#ifndef TESTSTRESSES_HPP_
-#define TESTBOXMODELWITHNODIVISION_HPP_
+#ifndef TESTSTRESSESINDEFORMATIONFORVTMODELS_HPP_
+#define TESTSTRESSESINDEFORMATIONFORVTMODELS_HPP_
 
 #include <cxxtest/TestSuite.h> //Needed for all test files
 
@@ -37,13 +37,13 @@
 
 #include "Debug.hpp"
 
-static const std::string M_OUTPUT_DIRECTORY = "MeasuringStresses";
+static const std::string M_OUTPUT_DIRECTORY = "MeasuringVTStresses";
 static const double M_DT = 0.005;
-static const double M_END_TIME = 20.0;
-static const double M_SECOND_END_TIME = 20.0;
+static const double M_END_TIME = 10.0;
+static const double M_SECOND_END_TIME = 10.0;
 static const double M_SAMPLING_TIMESTEP = 0.25/M_DT;
 
-class TestStressesInDeformationForFlatEpithelium : public AbstractCellBasedTestSuite
+class TestStressesInDeformationForVTModels : public AbstractCellBasedTestSuite
 {
 public:
 	void TestFlatEpithelium()
@@ -65,7 +65,7 @@ public:
 
 		double epithelial_epithelial_resting_spring_length = 1.0;
 
-		for (double vert = 0.0; vert < 5.0; vert += 1.0)
+		for (double vert = -1.0; vert < 0.0; vert += 1.0)
 		{
 			double vertical_force_magnitude = 5.0*vert;
 
@@ -233,7 +233,7 @@ public:
 			c_vector<double, 2> point, normal;
 
 			point(0) = 0.0;
-			point(1) = 0.75;
+			point(1) = 0.25;
 			normal(0) = 0.0;
 			normal(1) = -1.0;
 			MAKE_PTR_ARGS(FixedRegionPlaneBoundaryCondition<2>, p_bc1, (&cell_population, point, normal));
@@ -437,6 +437,11 @@ public:
 					}
 				}
 			}
+			else if (y == 0.0) // Add labels to the bottom row for the boundary conditoin
+			{
+				boost::shared_ptr<AbstractCellProperty> p_label = CellPropertyRegistry::Instance()->Get<CellLabel>();
+				cell_iter->AddCellProperty(p_label);
+			}
 		}
 
 		//Output data to vtk format so we can visualise it in Paraview
@@ -493,7 +498,7 @@ public:
 
 		// Now add the compression force
 
-		for (double vert = 0.0; vert < 5.0; vert += 1.0)
+		for (double vert = -1.0; vert < 0.0; vert += 1.0)
 		{
 			//Load saved simulation
 			OffLatticeSimulation<2>* p_simulator = CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Load(steady_state_output_directory, steady_state_time);

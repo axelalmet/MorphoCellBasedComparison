@@ -441,7 +441,101 @@ c_vector<double, 2> OverlappingSpheresBasedBasementMembraneForce::CalculateForce
 	//Initialise the force vector
 	c_vector<double, 2> force_due_to_basement_membrane;
 
-	if ( !IsBoundaryNode(rCellPopulation, nodeIndex) )
+	bool is_periodic_force = IsPeriodicForceApplied();
+
+	if (!is_periodic_force)
+	{
+		if ( !IsBoundaryNode(rCellPopulation, nodeIndex) )
+		{
+			double curvature = FindParametricCurvature(rCellPopulation, left_point, centre_point, right_point);
+
+			//Get the unit vectors from the centre points to its left and right neighbours
+			c_vector<double, 2> centre_to_left = rCellPopulation.rGetMesh().GetVectorFromAtoB(centre_point, left_point);
+			centre_to_left /= norm_2(centre_to_left); //Normalise vector
+
+			c_vector<double, 2> centre_to_right = rCellPopulation.rGetMesh().GetVectorFromAtoB(centre_point, right_point);
+			centre_to_right /= norm_2(centre_to_right); //Normalise vector
+
+			/* Define direction using a formula derived (essentially solve for the vector w such that u.w = v.w, where w is the force direction
+			 * and u = unit vector to the left and v = unit vector pointing to the right)
+			 */
+			c_vector<double, 2> left_to_right = rCellPopulation.rGetMesh().GetVectorFromAtoB(centre_to_left, centre_to_right);
+			//	PRINT_2_VARIABLES(left_point[0], left_point[1]);
+			//	PRINT_2_VARIABLES(centre_point[0], centre_point[1]);
+			//	PRINT_2_VARIABLES(right_point[0], right_point[1]);
+
+			assert(norm_2(left_to_right) != 0.0);
+
+			//Define force direction
+			c_vector<double, 2> force_direction;
+			force_direction(0) = left_to_right[1];
+			force_direction(1) = -left_to_right[0];
+
+			force_direction /= norm_2(left_to_right);
+
+			/* We now ensure the vector is pointing in the appropriate direction
+			 * (it will always point "down" and "outwards" initially).
+			 * */
+			if (target_curvature > 0.0) //If the force has overshot the target curvature, we need to reverse the force direction
+			{
+				if ( (curvature > 0.0)&&(curvature - target_curvature > 0.0) ) //If points look like V and the 'v' is too pointy, we send it away from the CoM
+				{
+					force_direction *= -1.0;
+				}
+
+			}
+			else if (target_curvature < 0.0) //Similar situation but with "/\"
+			{
+				if ( (curvature < 0.0)&&(curvature - target_curvature < 0.0) )
+				{
+					force_direction *= -1.0;
+				}
+			}
+			else //Reverse the force direction if we get a "V"
+			{
+				if (curvature > 0.0)
+				{
+					force_direction *= -1.0;
+				}
+			}
+
+			//Again, the geometry of the model alters how we apply target curvature
+			bool is_force_applied_to_crypt = GetCryptGeometryCheck();
+
+			//If we are considering a crypt geometry
+			if(is_force_applied_to_crypt)
+			{
+				// If we are looking at a boundary node, we apply no force.
+				if (left_point[0] > right_point[0])
+				{
+					force_due_to_basement_membrane = zero_vector<double>(2);
+				}
+				else
+				{
+					//If the cell falls in the region of non-zero target curvature
+					if( (centre_point[0] > left_boundary)&&(centre_point[0] < right_boundary) )
+					{
+						force_due_to_basement_membrane = basement_membrane_parameter*(fabs(curvature - target_curvature) )*force_direction;
+					}
+					else
+					{
+						//We take the absolute value of the local curvature as the force direction vector already accounts for which way
+						//the epithelial node 'should' go
+						force_due_to_basement_membrane = basement_membrane_parameter*fabs(curvature)*force_direction;
+					}
+				}
+			}
+			else //Else we are modelling organoid
+			{
+				force_due_to_basement_membrane = basement_membrane_parameter*(fabs(curvature - target_curvature) )*force_direction;
+			}
+		}
+		else
+		{
+			force_due_to_basement_membrane = zero_vector<double>(2);
+		}
+	}
+	else
 	{
 		double curvature = FindParametricCurvature(rCellPopulation, left_point, centre_point, right_point);
 
@@ -526,10 +620,6 @@ c_vector<double, 2> OverlappingSpheresBasedBasementMembraneForce::CalculateForce
 			force_due_to_basement_membrane = basement_membrane_parameter*(fabs(curvature - target_curvature) )*force_direction;
 		}
 	}
-	else
-	{
-		force_due_to_basement_membrane = zero_vector<double>(2);
-	}
 
 	return force_due_to_basement_membrane;
 }
@@ -555,60 +645,6 @@ void OverlappingSpheresBasedBasementMembraneForce::AddForceContribution(Abstract
 		EXCEPTION("Not every epithelial cell has been accounted for in defined monolayer");
 	}
 
-	//	//Check confluence of monolayer
-	//	for (std::map<unsigned, std::pair<unsigned, unsigned> >::iterator map_iter = epithelial_nodes_and_their_neighbours.begin();
-	//			map_iter != epithelial_nodes_and_their_neighbours.end();
-	//			map_iter++)
-	//	{
-	//
-	//		unsigned centre_node = map_iter->first;
-	//
-	//		std::pair<unsigned, unsigned> centre_nodes_neighbours = map_iter->second;
-	//		unsigned left_node = centre_nodes_neighbours.first;
-	//		unsigned right_node = centre_nodes_neighbours.second;
-	//
-	//		//Get the neighbours of the left and right neighbours
-	//		std::pair<unsigned, unsigned> left_nodes_neighbours = epithelial_nodes_and_their_neighbours[left_node];
-	//		std::pair<unsigned, unsigned> right_nodes_neighbours = epithelial_nodes_and_their_neighbours[right_node];
-	//
-	//		/*
-	//		 * If the right neighbour of the left node is NOT the centre node, OR
-	//		 * the left neighbour of the right node is NOT the centre node, the layer is not confluent.
-	//		 * If this condition doesn't hold for any of the epithelial nodes, then the layer is confluent.
-	//		 */
-	//
-	//		if (left_nodes_neighbours.second != centre_node)
-	//		{
-	//			//We would like to know where the discontinuity is: we print the indices of the discontinuous triple
-	//			//and the locations of the relevant nodes
-	//			PRINT_5_VARIABLES(left_node, left_nodes_neighbours.second, centre_node, right_nodes_neighbours.first, right_node);
-	//			PRINT_5_VARIABLES(rCellPopulation.GetNode(left_node)->rGetLocation()[0], rCellPopulation.GetNode(left_nodes_neighbours.second)->rGetLocation()[0],
-	//					rCellPopulation.GetNode(centre_node)->rGetLocation()[0], rCellPopulation.GetNode(right_nodes_neighbours.first)->rGetLocation()[0],
-	//					rCellPopulation.GetNode(right_node)->rGetLocation()[0]);
-	//			PRINT_5_VARIABLES(rCellPopulation.GetNode(left_node)->rGetLocation()[1], rCellPopulation.GetNode(left_nodes_neighbours.second)->rGetLocation()[1],
-	//					rCellPopulation.GetNode(centre_node)->rGetLocation()[1], rCellPopulation.GetNode(right_nodes_neighbours.first)->rGetLocation()[1],
-	//					rCellPopulation.GetNode(right_node)->rGetLocation()[1]);
-	//
-	//			//Flag the error
-	//			EXCEPTION("Defined monolayer is not confluent.");
-	//		}
-	//		else if (right_nodes_neighbours.first != centre_node)
-	//		{
-	//			//We would like to know where the discontinuity is: we print the indices of the discontinuous triple
-	//			//and the locations of the relevant nodes
-	//			PRINT_5_VARIABLES(left_node, left_nodes_neighbours.second, centre_node, right_nodes_neighbours.first, right_node);
-	//			PRINT_5_VARIABLES(rCellPopulation.GetNode(left_node)->rGetLocation()[0], rCellPopulation.GetNode(left_nodes_neighbours.second)->rGetLocation()[0],
-	//					rCellPopulation.GetNode(centre_node)->rGetLocation()[0], rCellPopulation.GetNode(right_nodes_neighbours.first)->rGetLocation()[0],
-	//					rCellPopulation.GetNode(right_node)->rGetLocation()[0]);
-	//			PRINT_5_VARIABLES(rCellPopulation.GetNode(left_node)->rGetLocation()[1], rCellPopulation.GetNode(left_nodes_neighbours.second)->rGetLocation()[1],
-	//					rCellPopulation.GetNode(centre_node)->rGetLocation()[1], rCellPopulation.GetNode(right_nodes_neighbours.first)->rGetLocation()[1],
-	//					rCellPopulation.GetNode(right_node)->rGetLocation()[1]);
-	//
-	//			//Flag the error
-	//			EXCEPTION("Defined monolayer is not confluent.");
-	//		}
-	//
-	//	}
 
 	//Iterate over each node and its neighbours
 	for (std::map<unsigned, std::pair<unsigned, unsigned> >::iterator map_iter = epithelial_nodes_and_their_neighbours.begin();

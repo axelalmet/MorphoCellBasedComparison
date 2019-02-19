@@ -39,7 +39,7 @@
 
 static const std::string M_OUTPUT_DIRECTORY = "RecordingStresses";
 static const double M_DT = 0.005;
-static const double M_END_TIME = 10.0;
+static const double M_END_TIME = 1.0;
 static const double M_SAMPLING_TIMESTEP = 0.1*M_END_TIME/M_DT;
 
 class TestStressesInDeformationForFlatEpithelium : public AbstractCellBasedTestSuite
@@ -64,7 +64,7 @@ public:
 
 		double epithelial_epithelial_resting_spring_length = 1.0;
 
-		double vertical_force_magnitude = 20.0;
+		double vertical_force_magnitude = 0.0;
 
 		//Generate the periodic mesh
 		CylindricalHoneycombMeshGenerator generator(cells_across, cells_up, ghosts);
@@ -176,7 +176,7 @@ public:
 		//Output data to vtk format so we can visualise it in Paraview
 		cell_population.SetWriteVtkAsPoints(true);
 		cell_population.AddPopulationWriter<VoronoiDataWriter>();
-//		cell_population.AddCellWriter<GeneralisedCellAppliedForceWriter>();
+		cell_population.AddCellWriter<GeneralisedCellAppliedForceWriter>();
 
 		OffLatticeSimulation<2> simulator(cell_population);
 
@@ -219,14 +219,14 @@ public:
 		simulator.AddCellKiller(p_anoikis_killer);
 
 //		// Add modifier to track positions
-//		MAKE_PTR(PositionAndForceTrackingModifier<2>, p_position_tracking_modifier);
-//		simulator.AddSimulationModifier(p_position_tracking_modifier);
+		MAKE_PTR(PositionAndForceTrackingModifier<2>, p_position_tracking_modifier);
+		simulator.AddSimulationModifier(p_position_tracking_modifier);
 
 		//			Fix the bottom row of cells
 		c_vector<double, 2> point, normal;
 
 		point(0) = 0.0;
-		point(1) = 0.25;
+		point(1) = 0.1;
 		normal(0) = 0.0;
 		normal(1) = -1.0;
 		MAKE_PTR_ARGS(FixedRegionPlaneBoundaryCondition<2>, p_bc1, (&cell_population, point, normal));

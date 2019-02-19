@@ -57,7 +57,7 @@ PositionAndForceTrackingModifier<DIM>::~PositionAndForceTrackingModifier()
 template<unsigned DIM>
 void PositionAndForceTrackingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopulation<DIM,DIM>& rCellPopulation)
 {
-	UpdateCellData(rCellPopulation);
+//	UpdateCellData(rCellPopulation);
 
 	CalculateModifierData(rCellPopulation);
 
@@ -70,36 +70,36 @@ void PositionAndForceTrackingModifier<DIM>::SetupSolve(AbstractCellPopulation<DI
 	 * We must update CellData in SetupSolve(), otherwise it will not have been
 	 * fully initialised by the time we enter the main time loop.
 	 */
-	UpdateCellData(rCellPopulation);
+//	UpdateCellData(rCellPopulation);
 
 	// Create output file
 	OutputFileHandler output_file_handler(outputDirectory + "/", false);
 	mpDataFile = output_file_handler.OpenOutputFile("positionsandforces.dat");
 
-//	if (dynamic_cast<MeshBasedCellPopulationWithGhostNodes<DIM>*>(&rCellPopulation))
-//		{
-//			MeshBasedCellPopulation<DIM>* p_tissue = static_cast<MeshBasedCellPopulation<DIM>*>(&rCellPopulation);
-//
-//			for(typename AbstractCellPopulation<DIM>::Iterator cell_iter = rCellPopulation.Begin();
-//					cell_iter != rCellPopulation.End();
-//					++cell_iter)
-//			{
-//
-//				boost::shared_ptr<AbstractCellProperty> p_type = cell_iter->GetCellProliferativeType();
-//				unsigned node_index = rCellPopulation.GetLocationIndexUsingCell(*cell_iter); // Get index
-//
-//				// Only consider epithelial cells
-//				if (!p_tissue->IsGhostNode(node_index))
-//				{
-//					Node<DIM>* p_node = rCellPopulation.GetNode(node_index);
-//					p_node->ClearAppliedForce();
-//				}
-//			}
-//
-//		}
+	//	if (dynamic_cast<MeshBasedCellPopulationWithGhostNodes<DIM>*>(&rCellPopulation))
+	//		{
+	//			MeshBasedCellPopulation<DIM>* p_tissue = static_cast<MeshBasedCellPopulation<DIM>*>(&rCellPopulation);
+	//
+	//			for(typename AbstractCellPopulation<DIM>::Iterator cell_iter = rCellPopulation.Begin();
+	//					cell_iter != rCellPopulation.End();
+	//					++cell_iter)
+	//			{
+	//
+	//				boost::shared_ptr<AbstractCellProperty> p_type = cell_iter->GetCellProliferativeType();
+	//				unsigned node_index = rCellPopulation.GetLocationIndexUsingCell(*cell_iter); // Get index
+	//
+	//				// Only consider epithelial cells
+	//				if (!p_tissue->IsGhostNode(node_index))
+	//				{
+	//					Node<DIM>* p_node = rCellPopulation.GetNode(node_index);
+	//					p_node->ClearAppliedForce();
+	//				}
+	//			}
+	//
+	//		}
 
 	//Initialise method
-//	CalculateModifierData(rCellPopulation);
+	//	CalculateModifierData(rCellPopulation);
 
 	//	*mpDataFile << "\n";
 }
@@ -113,34 +113,71 @@ void PositionAndForceTrackingModifier<DIM>::UpdateCellData(AbstractCellPopulatio
 template<unsigned DIM>
 std::set<unsigned> PositionAndForceTrackingModifier<DIM>::GetNeighbouringNodeIndices(AbstractCellPopulation<DIM, DIM>& rCellPopulation, unsigned nodeIndex)
 {
-	MeshBasedCellPopulation<DIM>* p_tissue = static_cast<MeshBasedCellPopulation<DIM>*>(&rCellPopulation);
-
-	p_tissue->CreateVoronoiTessellation();
-
-	assert(!(p_tissue->IsGhostNode(nodeIndex)));
 
 	// Create a set of neighbouring node indices
 	std::set<unsigned> neighbouring_node_indices;
 
-	// Find the indices of the elements owned by this node
-	std::set<unsigned> containing_elem_indices = p_tissue->GetNode(nodeIndex)->rGetContainingElementIndices();
-
-	// Iterate over these elements
-	for (std::set<unsigned>::iterator elem_iter = containing_elem_indices.begin();
-			elem_iter != containing_elem_indices.end();
-			++elem_iter)
+	if (dynamic_cast<MeshBasedCellPopulation<DIM>*>(&rCellPopulation))
 	{
-		// Get all the nodes contained in this element
-		// Don't want to include the current node
-		unsigned neighbour_global_index;
 
-		for (unsigned local_index=0; local_index<3; local_index++)
+		MeshBasedCellPopulation<DIM>* p_tissue = static_cast<MeshBasedCellPopulation<DIM>*>(&rCellPopulation);
+
+		p_tissue->CreateVoronoiTessellation();
+
+		assert(!(p_tissue->IsGhostNode(nodeIndex)));
+
+		// Find the indices of the elements owned by this node
+		std::set<unsigned> containing_elem_indices = p_tissue->GetNode(nodeIndex)->rGetContainingElementIndices();
+
+		// Iterate over these elements
+		for (std::set<unsigned>::iterator elem_iter = containing_elem_indices.begin();
+				elem_iter != containing_elem_indices.end();
+				++elem_iter)
 		{
-			neighbour_global_index = p_tissue->rGetMesh().GetElement(*elem_iter)->GetNodeGlobalIndex(local_index);
+			// Get all the nodes contained in this element
+			// Don't want to include the current node
+			unsigned neighbour_global_index;
 
-			if( (neighbour_global_index != nodeIndex) && (!p_tissue->IsGhostNode(neighbour_global_index)) )
+			for (unsigned local_index=0; local_index<3; local_index++)
 			{
-				neighbouring_node_indices.insert(neighbour_global_index);
+				neighbour_global_index = p_tissue->rGetMesh().GetElement(*elem_iter)->GetNodeGlobalIndex(local_index);
+
+				if( (neighbour_global_index != nodeIndex) && (!p_tissue->IsGhostNode(neighbour_global_index)) )
+				{
+					neighbouring_node_indices.insert(neighbour_global_index);
+				}
+			}
+		}
+	}
+	else if (dynamic_cast<MeshBasedCellPopulationWithGhostNodes<DIM>*>(&rCellPopulation))
+	{
+
+		MeshBasedCellPopulationWithGhostNodes<DIM>* p_tissue = static_cast<MeshBasedCellPopulationWithGhostNodes<DIM>*>(&rCellPopulation);
+
+		p_tissue->CreateVoronoiTessellation();
+
+		assert(!(p_tissue->IsGhostNode(nodeIndex)));
+
+		// Find the indices of the elements owned by this node
+		std::set<unsigned> containing_elem_indices = p_tissue->GetNode(nodeIndex)->rGetContainingElementIndices();
+
+		// Iterate over these elements
+		for (std::set<unsigned>::iterator elem_iter = containing_elem_indices.begin();
+				elem_iter != containing_elem_indices.end();
+				++elem_iter)
+		{
+			// Get all the nodes contained in this element
+			// Don't want to include the current node
+			unsigned neighbour_global_index;
+
+			for (unsigned local_index=0; local_index<3; local_index++)
+			{
+				neighbour_global_index = p_tissue->rGetMesh().GetElement(*elem_iter)->GetNodeGlobalIndex(local_index);
+
+				if( (neighbour_global_index != nodeIndex) && (!p_tissue->IsGhostNode(neighbour_global_index)) )
+				{
+					neighbouring_node_indices.insert(neighbour_global_index);
+				}
 			}
 		}
 	}
@@ -160,6 +197,79 @@ std::vector<unsigned> PositionAndForceTrackingModifier<DIM>::GetEpitheliumInArcL
 
 	// First, we obtain the epithelial indices and sort them by their x-coordinate. We assume that the left-most cell is the 'starting' cell.
 	if (dynamic_cast<MeshBasedCellPopulationWithGhostNodes<DIM>*>(&rCellPopulation))
+	{
+		MeshBasedCellPopulationWithGhostNodes<DIM>* p_tissue = static_cast<MeshBasedCellPopulationWithGhostNodes<DIM>*>(&rCellPopulation);
+
+		p_tissue->CreateVoronoiTessellation();
+
+		for(typename AbstractCellPopulation<DIM>::Iterator cell_iter = rCellPopulation.Begin();
+				cell_iter != rCellPopulation.End();
+				++cell_iter)
+		{
+
+			boost::shared_ptr<AbstractCellProperty> p_type = cell_iter->GetCellProliferativeType();
+			unsigned node_index = rCellPopulation.GetLocationIndexUsingCell(*cell_iter); // Get index
+
+			// Only consider epithelial cells
+			if (!p_tissue->IsGhostNode(node_index))
+			{
+				if  ( p_type->template IsType<DifferentiatedCellProliferativeType>()==false )
+				{
+
+					double x = rCellPopulation.GetLocationOfCellCentre(*cell_iter)[0]; // Get the x coordinate
+
+					std::pair<double, unsigned> x_coordinate_and_index = std::make_pair(x, node_index);
+
+					// Update the vector
+					epithelial_x_coordinates_and_indices.push_back(x_coordinate_and_index);
+
+				}
+			}
+		}
+
+		//Sort indices by the x-coordinate
+		std::sort(epithelial_x_coordinates_and_indices.begin(), epithelial_x_coordinates_and_indices.end());
+
+		//We now go through the epithelial_indices until we've accounted for every cell
+		unsigned num_epithelial_cells = epithelial_x_coordinates_and_indices.size();
+		unsigned current_index = epithelial_x_coordinates_and_indices[0].second;
+		unsigned cell_count = 1;
+
+		epithelium_in_order.push_back(current_index);
+
+		// The way this method works: we start from the first index, and work through its neighbours until
+		// we find another epithelial cell. Note that due to the VT model, we should have at most two neighbouring
+		// epithelial cells.
+		while (cell_count < num_epithelial_cells)
+		{
+			std::set<unsigned> neighbour_indices = GetNeighbouringNodeIndices(rCellPopulation, current_index);
+
+			for(std::set<unsigned>::iterator neighbour_iter=neighbour_indices.begin();
+					neighbour_iter != neighbour_indices.end();
+					++neighbour_iter)
+			{
+
+				if (!p_tissue->IsGhostNode(*neighbour_iter))
+				{
+					boost::shared_ptr<AbstractCellProperty> p_type = rCellPopulation.GetCellUsingLocationIndex(*neighbour_iter)->GetCellProliferativeType();
+
+					// If the neighbour is an epithelial cell and not already in the vector, add it.
+					if ( (!p_type->template IsType<DifferentiatedCellProliferativeType>())&&
+							(std::find(epithelium_in_order.begin(), epithelium_in_order.end(), *neighbour_iter) == epithelium_in_order.end()))
+					{
+						// Update epithelium
+						epithelium_in_order.push_back(*neighbour_iter);
+
+						// Update iteration
+						current_index = *neighbour_iter;
+						cell_count += 1;
+					}
+				}
+			}
+		}
+
+	}
+	else if (dynamic_cast<MeshBasedCellPopulation<DIM>*>(&rCellPopulation))
 	{
 		MeshBasedCellPopulation<DIM>* p_tissue = static_cast<MeshBasedCellPopulation<DIM>*>(&rCellPopulation);
 
@@ -250,7 +360,7 @@ void PositionAndForceTrackingModifier<DIM>::CalculateModifierData(AbstractCellPo
 
 	if (dynamic_cast<MeshBasedCellPopulationWithGhostNodes<DIM>*>(&rCellPopulation))
 	{
-		MeshBasedCellPopulation<DIM>* p_tissue = static_cast<MeshBasedCellPopulation<DIM>*>(&rCellPopulation);
+		MeshBasedCellPopulationWithGhostNodes<DIM>* p_tissue = static_cast<MeshBasedCellPopulationWithGhostNodes<DIM>*>(&rCellPopulation);
 
 		p_tissue->CreateVoronoiTessellation();
 
@@ -258,23 +368,13 @@ void PositionAndForceTrackingModifier<DIM>::CalculateModifierData(AbstractCellPo
 		{
 			// Get the location and force via the index
 			unsigned epithelial_node_index = epithelial_indices[i];
-			PRINT_VARIABLE(epithelial_node_index);
+//			PRINT_VARIABLE(epithelial_node_index);
 
 			c_vector<double, 2> cell_location = rCellPopulation.GetNode(epithelial_node_index)->rGetLocation();
 
-			PRINT_2_VARIABLES(cell_location[0], cell_location[1]);
+//			PRINT_2_VARIABLES(cell_location[0], cell_location[1]);
 
-			std::vector<double> node_attributes = rCellPopulation.GetNode(epithelial_node_index)->rGetNodeAttributes();
-
-			PRINT_2_VARIABLES(cell_location[0], cell_location[1]);
-
-
-			for (unsigned j = 0; j < node_attributes.size(); j++)
-			{
-				PRINT_VARIABLE(node_attributes[j]);
-			}
-
-			c_vector<double, 2> applied_force = p_tissue->GetNode(epithelial_node_index)->rGetAppliedForce();
+			c_vector<double, 2> applied_force =  rCellPopulation.GetNode(epithelial_node_index)->rGetAppliedForce();
 
 
 			// Add the coordinates
@@ -302,6 +402,59 @@ void PositionAndForceTrackingModifier<DIM>::CalculateModifierData(AbstractCellPo
 		*mpDataFile << "\n";
 
 	}
+	else if (dynamic_cast<MeshBasedCellPopulation<DIM>*>(&rCellPopulation))
+	{
+		MeshBasedCellPopulation<DIM>* p_tissue = static_cast<MeshBasedCellPopulation<DIM>*>(&rCellPopulation);
+
+		p_tissue->CreateVoronoiTessellation();
+
+		for (unsigned i = 0; i < num_epithelial_cells; i++)
+		{
+			// Get the location and force via the index
+			unsigned epithelial_node_index = epithelial_indices[i];
+			PRINT_VARIABLE(epithelial_node_index);
+
+			c_vector<double, 2> cell_location = rCellPopulation.GetNode(epithelial_node_index)->rGetLocation();
+
+			PRINT_2_VARIABLES(cell_location[0], cell_location[1]);
+
+			std::vector<double> node_attributes = rCellPopulation.GetNode(epithelial_node_index)->rGetNodeAttributes();
+
+			PRINT_2_VARIABLES(cell_location[0], cell_location[1]);
+
+
+			for (unsigned j = 0; j < node_attributes.size(); j++)
+			{
+				PRINT_VARIABLE(node_attributes[j]);
+			}
+
+			c_vector<double, 2> applied_force =  rCellPopulation.GetNode(epithelial_node_index)->rGetAppliedForce();
+
+
+			// Add the coordinates
+			x_coordinates.push_back(cell_location[0]);
+			y_coordinates.push_back(cell_location[1]);
+
+		}
+
+		*mpDataFile << SimulationTime::Instance()->GetTime() << "\n";
+
+		// Write everything to the file now
+
+		// x coordinates
+		for (unsigned i = 0; i < num_epithelial_cells; i++)
+		{
+			*mpDataFile << x_coordinates[i] << "\t";
+		}
+		*mpDataFile << "\n";
+
+		// y coordinates
+		for (unsigned i = 0; i < num_epithelial_cells; i++)
+		{
+			*mpDataFile << y_coordinates[i] << "\t";
+		}
+		*mpDataFile << "\n";
+	}
 
 }
 
@@ -309,7 +462,7 @@ template<unsigned DIM>
 void PositionAndForceTrackingModifier<DIM>::UpdateAtEndOfSolve(AbstractCellPopulation<DIM, DIM>& rCellPopulation)
 {
 
-	UpdateCellData(rCellPopulation);
+//	UpdateCellData(rCellPopulation);
 
 //	CalculateModifierData(rCellPopulation);
 

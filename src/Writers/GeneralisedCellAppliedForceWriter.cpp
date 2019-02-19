@@ -69,13 +69,21 @@ c_vector<double, SPACE_DIM> GeneralisedCellAppliedForceWriter<ELEMENT_DIM, SPACE
 		PRINT_VARIABLE(3.0);
 
 		unsigned node_index = pCellPopulation->GetLocationIndexUsingCell(pCell);
+
+		PRINT_VARIABLE(10.0);
 		applied_force = pCellPopulation->GetNode(node_index)->rGetAppliedForce();
+		PRINT_VARIABLE(11.0);
+
 	}
 	else if (dynamic_cast<MeshBasedCellPopulationWithGhostNodes<SPACE_DIM>*>(pCellPopulation))
 	{
 		PRINT_VARIABLE(4.0);
 		unsigned node_index = pCellPopulation->GetLocationIndexUsingCell(pCell);
 		applied_force = pCellPopulation->GetNode(node_index)->rGetAppliedForce();
+	}
+	else
+	{
+		PRINT_VARIABLE(5.0);
 	}
 
 	return applied_force;
