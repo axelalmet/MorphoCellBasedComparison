@@ -176,7 +176,7 @@ public:
 		//Output data to vtk format so we can visualise it in Paraview
 		cell_population.SetWriteVtkAsPoints(true);
 		cell_population.AddPopulationWriter<VoronoiDataWriter>();
-		cell_population.AddCellWriter<GeneralisedCellAppliedForceWriter>();
+//		cell_population.AddCellWriter<GeneralisedCellAppliedForceWriter>();
 
 		OffLatticeSimulation<2> simulator(cell_population);
 

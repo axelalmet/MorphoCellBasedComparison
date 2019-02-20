@@ -119,7 +119,7 @@ public:
     /*
      * Method to obtain non-ghost neighbours of index
      */
-    std::set<unsigned> GetNeighbouringNodeIndices(AbstractCellPopulation<DIM, DIM>& rCellPopulation, unsigned nodeIndex);
+    std::set<unsigned> GetNeighbouringEpithelialIndices(AbstractCellPopulation<DIM, DIM>& rCellPopulation, unsigned nodeIndex);
 
     /**
      * Method to get epithelium in increasing arclength order.

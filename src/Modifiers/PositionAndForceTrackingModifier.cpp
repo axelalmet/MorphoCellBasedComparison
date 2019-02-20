@@ -57,7 +57,7 @@ PositionAndForceTrackingModifier<DIM>::~PositionAndForceTrackingModifier()
 template<unsigned DIM>
 void PositionAndForceTrackingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPopulation<DIM,DIM>& rCellPopulation)
 {
-//	UpdateCellData(rCellPopulation);
+	//	UpdateCellData(rCellPopulation);
 
 	CalculateModifierData(rCellPopulation);
 
@@ -70,7 +70,7 @@ void PositionAndForceTrackingModifier<DIM>::SetupSolve(AbstractCellPopulation<DI
 	 * We must update CellData in SetupSolve(), otherwise it will not have been
 	 * fully initialised by the time we enter the main time loop.
 	 */
-//	UpdateCellData(rCellPopulation);
+	//	UpdateCellData(rCellPopulation);
 
 	// Create output file
 	OutputFileHandler output_file_handler(outputDirectory + "/", false);
@@ -111,7 +111,7 @@ void PositionAndForceTrackingModifier<DIM>::UpdateCellData(AbstractCellPopulatio
 }
 
 template<unsigned DIM>
-std::set<unsigned> PositionAndForceTrackingModifier<DIM>::GetNeighbouringNodeIndices(AbstractCellPopulation<DIM, DIM>& rCellPopulation, unsigned nodeIndex)
+std::set<unsigned> PositionAndForceTrackingModifier<DIM>::GetNeighbouringEpithelialIndices(AbstractCellPopulation<DIM, DIM>& rCellPopulation, unsigned nodeIndex)
 {
 
 	// Create a set of neighbouring node indices
@@ -144,7 +144,13 @@ std::set<unsigned> PositionAndForceTrackingModifier<DIM>::GetNeighbouringNodeInd
 
 				if( (neighbour_global_index != nodeIndex) && (!p_tissue->IsGhostNode(neighbour_global_index)) )
 				{
-					neighbouring_node_indices.insert(neighbour_global_index);
+					// Only take epithelial indices
+					boost::shared_ptr<AbstractCellProperty> p_type = p_tissue->GetCellUsingLocationIndex(nodeIndex)->GetCellProliferativeType();
+
+					if (!p_type->template IsType<DifferentiatedCellProliferativeType>() )
+					{
+						neighbouring_node_indices.insert(neighbour_global_index);
+					}
 				}
 			}
 		}
@@ -176,7 +182,13 @@ std::set<unsigned> PositionAndForceTrackingModifier<DIM>::GetNeighbouringNodeInd
 
 				if( (neighbour_global_index != nodeIndex) && (!p_tissue->IsGhostNode(neighbour_global_index)) )
 				{
-					neighbouring_node_indices.insert(neighbour_global_index);
+					// Only take epithelial indices
+					boost::shared_ptr<AbstractCellProperty> p_type = p_tissue->GetCellUsingLocationIndex(nodeIndex)->GetCellProliferativeType();
+
+					if (!p_type->template IsType<DifferentiatedCellProliferativeType>() )
+					{
+						neighbouring_node_indices.insert(neighbour_global_index);
+					}
 				}
 			}
 		}
@@ -242,7 +254,7 @@ std::vector<unsigned> PositionAndForceTrackingModifier<DIM>::GetEpitheliumInArcL
 		// epithelial cells.
 		while (cell_count < num_epithelial_cells)
 		{
-			std::set<unsigned> neighbour_indices = GetNeighbouringNodeIndices(rCellPopulation, current_index);
+			std::set<unsigned> neighbour_indices = GetNeighbouringEpithelialIndices(rCellPopulation, current_index);
 
 			for(std::set<unsigned>::iterator neighbour_iter=neighbour_indices.begin();
 					neighbour_iter != neighbour_indices.end();
@@ -263,6 +275,7 @@ std::vector<unsigned> PositionAndForceTrackingModifier<DIM>::GetEpitheliumInArcL
 						// Update iteration
 						current_index = *neighbour_iter;
 						cell_count += 1;
+						break;
 					}
 				}
 			}
@@ -315,7 +328,7 @@ std::vector<unsigned> PositionAndForceTrackingModifier<DIM>::GetEpitheliumInArcL
 		// epithelial cells.
 		while (cell_count < num_epithelial_cells)
 		{
-			std::set<unsigned> neighbour_indices = GetNeighbouringNodeIndices(rCellPopulation, current_index);
+			std::set<unsigned> neighbour_indices = GetNeighbouringEpithelialIndices(rCellPopulation, current_index);
 
 			for(std::set<unsigned>::iterator neighbour_iter=neighbour_indices.begin();
 					neighbour_iter != neighbour_indices.end();
@@ -336,6 +349,7 @@ std::vector<unsigned> PositionAndForceTrackingModifier<DIM>::GetEpitheliumInArcL
 						// Update iteration
 						current_index = *neighbour_iter;
 						cell_count += 1;
+						break;
 					}
 				}
 			}
@@ -357,6 +371,8 @@ void PositionAndForceTrackingModifier<DIM>::CalculateModifierData(AbstractCellPo
 	// We're collecting the data in this extremely inefficient format for the sake of writing it to the data.
 	std::vector<double> x_coordinates;
 	std::vector<double> y_coordinates;
+	std::vector<double> horizontal_forces;
+	std::vector<double> vertical_forces;
 
 	if (dynamic_cast<MeshBasedCellPopulationWithGhostNodes<DIM>*>(&rCellPopulation))
 	{
@@ -368,11 +384,9 @@ void PositionAndForceTrackingModifier<DIM>::CalculateModifierData(AbstractCellPo
 		{
 			// Get the location and force via the index
 			unsigned epithelial_node_index = epithelial_indices[i];
-//			PRINT_VARIABLE(epithelial_node_index);
 
 			c_vector<double, 2> cell_location = rCellPopulation.GetNode(epithelial_node_index)->rGetLocation();
 
-//			PRINT_2_VARIABLES(cell_location[0], cell_location[1]);
 
 			c_vector<double, 2> applied_force =  rCellPopulation.GetNode(epithelial_node_index)->rGetAppliedForce();
 
@@ -380,26 +394,10 @@ void PositionAndForceTrackingModifier<DIM>::CalculateModifierData(AbstractCellPo
 			// Add the coordinates
 			x_coordinates.push_back(cell_location[0]);
 			y_coordinates.push_back(cell_location[1]);
+			horizontal_forces.push_back(applied_force[0]);
+			vertical_forces.push_back(applied_force[1]);
 
 		}
-
-		*mpDataFile << SimulationTime::Instance()->GetTime() << "\n";
-
-		// Write everything to the file now
-
-		// x coordinates
-		for (unsigned i = 0; i < num_epithelial_cells; i++)
-		{
-			*mpDataFile << x_coordinates[i] << "\t";
-		}
-		*mpDataFile << "\n";
-
-		// y coordinates
-		for (unsigned i = 0; i < num_epithelial_cells; i++)
-		{
-			*mpDataFile << y_coordinates[i] << "\t";
-		}
-		*mpDataFile << "\n";
 
 	}
 	else if (dynamic_cast<MeshBasedCellPopulation<DIM>*>(&rCellPopulation))
@@ -434,27 +432,44 @@ void PositionAndForceTrackingModifier<DIM>::CalculateModifierData(AbstractCellPo
 			// Add the coordinates
 			x_coordinates.push_back(cell_location[0]);
 			y_coordinates.push_back(cell_location[1]);
+			horizontal_forces.push_back(applied_force[0]);
+			vertical_forces.push_back(applied_force[1]);
 
 		}
-
-		*mpDataFile << SimulationTime::Instance()->GetTime() << "\n";
-
-		// Write everything to the file now
-
-		// x coordinates
-		for (unsigned i = 0; i < num_epithelial_cells; i++)
-		{
-			*mpDataFile << x_coordinates[i] << "\t";
-		}
-		*mpDataFile << "\n";
-
-		// y coordinates
-		for (unsigned i = 0; i < num_epithelial_cells; i++)
-		{
-			*mpDataFile << y_coordinates[i] << "\t";
-		}
-		*mpDataFile << "\n";
 	}
+
+
+	*mpDataFile << SimulationTime::Instance()->GetTime() << "\n";
+
+	// Write everything to the file now
+
+	// x coordinates
+	for (unsigned i = 0; i < num_epithelial_cells; i++)
+	{
+		*mpDataFile << x_coordinates[i] << "\t";
+	}
+	*mpDataFile << "\n";
+
+	// y coordinates
+	for (unsigned i = 0; i < num_epithelial_cells; i++)
+	{
+		*mpDataFile << y_coordinates[i] << "\t";
+	}
+	*mpDataFile << "\n";
+
+	// horizontal forces
+	for (unsigned i = 0; i < num_epithelial_cells; i++)
+	{
+		*mpDataFile << horizontal_forces[i] << "\t";
+	}
+	*mpDataFile << "\n";
+
+	// vertical forces
+	for (unsigned i = 0; i < num_epithelial_cells; i++)
+	{
+		*mpDataFile << vertical_forces[i] << "\t";
+	}
+	*mpDataFile << "\n";
 
 }
 
@@ -462,9 +477,9 @@ template<unsigned DIM>
 void PositionAndForceTrackingModifier<DIM>::UpdateAtEndOfSolve(AbstractCellPopulation<DIM, DIM>& rCellPopulation)
 {
 
-//	UpdateCellData(rCellPopulation);
+	//	UpdateCellData(rCellPopulation);
 
-//	CalculateModifierData(rCellPopulation);
+	//	CalculateModifierData(rCellPopulation);
 
 	// Close output file.
 	mpDataFile->close();

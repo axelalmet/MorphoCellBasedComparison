@@ -39,9 +39,9 @@
 
 static const std::string M_OUTPUT_DIRECTORY = "MeasuringVTStresses";
 static const double M_DT = 0.005;
-static const double M_END_TIME = 10.0;
-static const double M_SECOND_END_TIME = 10.0;
-static const double M_SAMPLING_TIMESTEP = 0.25/M_DT;
+static const double M_END_TIME = 20.0;
+static const double M_SECOND_END_TIME = 20.0;
+static const double M_SAMPLING_TIMESTEP = 0.25*M_END_TIME/M_DT;
 
 class TestStressesInDeformationForVTModels : public AbstractCellBasedTestSuite
 {
@@ -183,7 +183,6 @@ public:
 			//Output data to vtk format so we can visualise it in Paraview
 			cell_population.SetWriteVtkAsPoints(true);
 			cell_population.AddPopulationWriter<VoronoiDataWriter>();
-			//			cell_population.AddCellWriter<GeneralisedCellAppliedForceWriter>();
 
 			OffLatticeSimulation<2> simulator(cell_population);
 
@@ -225,9 +224,9 @@ public:
 			MAKE_PTR_ARGS(AnoikisCellKiller, p_anoikis_killer, (&cell_population));
 			simulator.AddCellKiller(p_anoikis_killer);
 
-			//			// Add modifier to track positions
-			//			MAKE_PTR(PositionAndForceTrackingModifier<2>, p_position_tracking_modifier);
-			//			simulator.AddSimulationModifier(p_position_tracking_modifier);
+			// Add modifier to track positions
+			MAKE_PTR(PositionAndForceTrackingModifier<2>, p_position_tracking_modifier);
+			simulator.AddSimulationModifier(p_position_tracking_modifier);
 
 			//			Fix the bottom row of cells
 			c_vector<double, 2> point, normal;
@@ -481,6 +480,10 @@ public:
 		//Add anoikis-based cell killer
 		MAKE_PTR_ARGS(AnoikisCellKiller, p_anoikis_killer, (&cell_population));
 		simulator.AddCellKiller(p_anoikis_killer);
+
+		// Add modifier to track positions
+		MAKE_PTR(PositionAndForceTrackingModifier<2>, p_position_tracking_modifier);
+		simulator.AddSimulationModifier(p_position_tracking_modifier);
 
 		//Fix the bottom row of cells
 		c_vector<double, 2> point, normal;
