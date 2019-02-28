@@ -93,7 +93,15 @@ public:
      *
      * @param rCellPopulation reference to the cell population
      */
-    void UpdateAtEndOfTimeStep(AbstractCellPopulation<DIM,DIM>& rCellPopulation);
+    virtual void UpdateAtEndOfTimeStep(AbstractCellPopulation<DIM,DIM>& rCellPopulation);
+
+    /**
+     * Specify what to do in the simulation at the end of each output timestep,
+     * after UpdateAtEndOfTimeStep() has been called.
+     *
+     * @param rCellPopulation reference to the cell population
+     */
+    virtual void UpdateAtEndOfOutputTimeStep(AbstractCellPopulation<DIM,DIM>& rCellPopulation);
 
     /**
      * Overridden SetupSolve() method.

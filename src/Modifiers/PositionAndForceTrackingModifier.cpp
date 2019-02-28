@@ -59,6 +59,13 @@ void PositionAndForceTrackingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPo
 {
 	//	UpdateCellData(rCellPopulation);
 
+//	CalculateModifierData(rCellPopulation);
+
+}
+
+template<unsigned DIM>
+void PositionAndForceTrackingModifier<DIM>::UpdateAtEndOfOutputTimeStep(AbstractCellPopulation<DIM,DIM>& rCellPopulation)
+{
 	CalculateModifierData(rCellPopulation);
 
 }
@@ -472,6 +479,7 @@ void PositionAndForceTrackingModifier<DIM>::CalculateModifierData(AbstractCellPo
 	*mpDataFile << "\n";
 
 }
+
 
 template<unsigned DIM>
 void PositionAndForceTrackingModifier<DIM>::UpdateAtEndOfSolve(AbstractCellPopulation<DIM, DIM>& rCellPopulation)

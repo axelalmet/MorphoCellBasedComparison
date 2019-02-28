@@ -65,9 +65,9 @@ public:
 
 		double epithelial_epithelial_resting_spring_length = 1.0;
 
-		for (double vert = -1.0; vert < 0.0; vert += 1.0)
+		for (double vert = -1.0; vert < 6.0; vert += 1.0)
 		{
-			double vertical_force_magnitude = 5.0*vert;
+			double vertical_force_magnitude = 2.0*vert;
 
 			//Generate the mesh (non-periodic)
 			//		HoneycombMeshGenerator generator(cells_across, cells_up, ghosts);
@@ -260,7 +260,7 @@ public:
 	void TestBuckledCryptEpithelium()
 	{
 		// Set the time that we run the initial crypt to steady state
-		double steady_state_time = 10.0;
+		double steady_state_time = 20.0;
 
 		//Set all the spring stiffness variables
 		double epithelial_epithelial_stiffness = 45.0;
@@ -489,7 +489,7 @@ public:
 		c_vector<double, 2> point, normal;
 
 		point(0) = 0.0;
-		point(1) = 0.75;
+		point(1) = 0.25;
 		normal(0) = 0.0;
 		normal(1) = -1.0;
 		MAKE_PTR_ARGS(FixedRegionPlaneBoundaryCondition<2>, p_bc1, (&cell_population, point, normal));
@@ -501,12 +501,12 @@ public:
 
 		// Now add the compression force
 
-		for (double vert = -1.0; vert < 0.0; vert += 1.0)
+		for (double vert = -1.0; vert < 6.0; vert += 1.0)
 		{
 			//Load saved simulation
 			OffLatticeSimulation<2>* p_simulator = CellBasedSimulationArchiver<2, OffLatticeSimulation<2> >::Load(steady_state_output_directory, steady_state_time);
 
-			double vertical_force_magnitude = 5.0*vert;
+			double vertical_force_magnitude = 2.0*vert;
 
 			//Set output directory
 			std::stringstream out;

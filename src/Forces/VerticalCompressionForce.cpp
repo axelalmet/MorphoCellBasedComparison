@@ -72,6 +72,56 @@ void VerticalCompressionForce::AddForceContribution(AbstractCellPopulation<2>& r
 
 		}
 	}
+	else if (dynamic_cast<MeshBasedCellPopulation<2>*>(&rCellPopulation))
+	{
+		for (AbstractCellPopulation<2>::Iterator cell_iter = rCellPopulation.Begin();
+				cell_iter != rCellPopulation.End();
+				++cell_iter)
+		{
+
+			MeshBasedCellPopulation<2>* p_cell_population = static_cast<MeshBasedCellPopulation<2>*>(&rCellPopulation);
+
+			// Get the node index
+			unsigned node_index = rCellPopulation.GetLocationIndexUsingCell(*cell_iter);
+
+			// Get the cell type
+			boost::shared_ptr<AbstractCellProperty> p_type = cell_iter->GetCellProliferativeType();
+
+			//Apply only to epithelial cells
+			if (!p_cell_population->IsGhostNode(node_index))
+			{
+				if (p_type->template IsType<DifferentiatedCellProliferativeType>()==false)
+				{
+					rCellPopulation.GetNode(node_index)->AddAppliedForceContribution(vertical_force);
+				}
+			}
+
+
+		}
+	}
+	else if (dynamic_cast<NodeBasedCellPopulation<2>*>(&rCellPopulation))
+	{
+		for (AbstractCellPopulation<2>::Iterator cell_iter = rCellPopulation.Begin();
+				cell_iter != rCellPopulation.End();
+				++cell_iter)
+		{
+
+			// Get the node index
+			unsigned node_index = rCellPopulation.GetLocationIndexUsingCell(*cell_iter);
+
+			// Get the cell type
+			boost::shared_ptr<AbstractCellProperty> p_type = cell_iter->GetCellProliferativeType();
+
+			//Apply only to epithelial cells
+
+			if (p_type->template IsType<DifferentiatedCellProliferativeType>()==false)
+			{
+				rCellPopulation.GetNode(node_index)->AddAppliedForceContribution(vertical_force);
+			}
+
+
+		}
+	}
 
 }
 
