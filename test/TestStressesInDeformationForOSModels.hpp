@@ -241,10 +241,10 @@ public:
 	void TestBuckledEpithelium()
 	{
 
-		//Set all the spring stiffness variables
-//		double epithelial_epithelial_stiffness = 45.0;
-//		double epithelial_stromal_stiffness = 45.0;
-//		double stromal_stromal_stiffness = 45.0;
+		//		Set all the spring stiffness variables
+				double epithelial_epithelial_stiffness = 45.0;
+				double epithelial_stromal_stiffness = 45.0;
+				double stromal_stromal_stiffness = 45.0;
 
 		//Set the number of cells across and down for the array
 		unsigned cells_across = 10;
@@ -256,7 +256,7 @@ public:
 
 		double epithelial_epithelial_resting_spring_length = 1.0;
 
-//		double radius_of_interaction = 1.5;
+		double radius_of_interaction = 1.5;
 		double division_separation = 0.1;
 
 		for (double vert = 1.0; vert < 2.0; vert += 1.0)
@@ -351,6 +351,8 @@ public:
 				}
 			}
 
+			cell_population.RemoveDeadCells();
+
 			// Un-Differentiate the epithelium
 			for (AbstractCellPopulation<2>::Iterator cell_iter = cell_population.Begin();
 					cell_iter != cell_population.End(); ++cell_iter)
@@ -366,6 +368,10 @@ public:
 				else if (y == max_height)
 				{
 					cell_iter->SetCellProliferativeType(p_stem_type);
+				}
+				else if ((y < bottom_boundary)&&((x < left_boundary)||(x > right_boundary)) ) // This check cleans up the epithelium at the bottom
+				{
+					cell_iter->SetCellProliferativeType(p_diff_type);
 				}
 			}
 
@@ -387,16 +393,16 @@ public:
 			simulator.SetSamplingTimestepMultiple(M_SAMPLING_TIMESTEP); //Sample the simulation at every hour
 			simulator.SetEndTime(M_END_TIME); //Hopefully this is long enough for a steady state
 
-//			//Add linear spring force (modified to have three different spring stiffnesses, depending on the type of pair)
-//			MAKE_PTR(LinearSpringForceWithVariableRestLength<2>, p_spring_force);
-//			//			p_spring_force->SetCutOffLength(epithelial_epithelial_resting_spring_length);
-//			p_spring_force->SetEpithelialEpithelialSpringStiffness(epithelial_epithelial_stiffness); //Default is 15
-//			p_spring_force->SetEpithelialStromalSpringStiffness(epithelial_stromal_stiffness); //Default is 15
-//			p_spring_force->SetStromalStromalSpringStiffness(stromal_stromal_stiffness); //Default is 15
-//			p_spring_force->SetEpithelialEpithelialRestingSpringLength(epithelial_epithelial_resting_spring_length);
-//			p_spring_force->SetCutOffLength(radius_of_interaction);
-//			p_spring_force->SetMeinekeDivisionRestingSpringLength(division_separation);
-//			simulator.AddForce(p_spring_force);
+			//Add linear spring force (modified to have three different spring stiffnesses, depending on the type of pair)
+			MAKE_PTR(LinearSpringForceWithVariableRestLength<2>, p_spring_force);
+			//			p_spring_force->SetCutOffLength(epithelial_epithelial_resting_spring_length);
+			p_spring_force->SetEpithelialEpithelialSpringStiffness(epithelial_epithelial_stiffness); //Default is 15
+			p_spring_force->SetEpithelialStromalSpringStiffness(epithelial_stromal_stiffness); //Default is 15
+			p_spring_force->SetStromalStromalSpringStiffness(stromal_stromal_stiffness); //Default is 15
+			p_spring_force->SetEpithelialEpithelialRestingSpringLength(epithelial_epithelial_resting_spring_length);
+			p_spring_force->SetCutOffLength(radius_of_interaction);
+			p_spring_force->SetMeinekeDivisionRestingSpringLength(division_separation);
+			simulator.AddForce(p_spring_force);
 
 			//			//Add basement membrane force
 			//			MAKE_PTR(OverlappingSpheresBasedBasementMembraneForce, p_bm_force);
@@ -414,10 +420,10 @@ public:
 			//			p_vertical_force->SetForceMagnitude(vertical_force_magnitude);
 			//			simulator.AddForce(p_vertical_force);
 
-//			//Add anoikis-based cell killer
-//			MAKE_PTR_ARGS(AnoikisCellKiller, p_anoikis_killer, (&cell_population));
-//			p_anoikis_killer->SetCutOffRadius(radius_of_interaction);
-//			simulator.AddCellKiller(p_anoikis_killer);
+			//Add anoikis-based cell killer
+			MAKE_PTR_ARGS(AnoikisCellKiller, p_anoikis_killer, (&cell_population));
+			p_anoikis_killer->SetCutOffRadius(radius_of_interaction);
+			simulator.AddCellKiller(p_anoikis_killer);
 
 			//			// Add modifier to track positions
 			//			MAKE_PTR(PositionAndForceTrackingModifier<2>, p_position_tracking_modifier);

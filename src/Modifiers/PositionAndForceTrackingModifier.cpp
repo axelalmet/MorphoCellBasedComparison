@@ -59,7 +59,7 @@ void PositionAndForceTrackingModifier<DIM>::UpdateAtEndOfTimeStep(AbstractCellPo
 {
 	//	UpdateCellData(rCellPopulation);
 
-//	CalculateModifierData(rCellPopulation);
+	//	CalculateModifierData(rCellPopulation);
 
 }
 
@@ -363,6 +363,74 @@ std::vector<unsigned> PositionAndForceTrackingModifier<DIM>::GetEpitheliumInArcL
 		}
 
 	}
+	else if (dynamic_cast<NodeBasedCellPopulation<DIM>*>(&rCellPopulation))
+	{
+//		NodeBasedCellPopulation<DIM>* p_tissue = static_cast<NodeBasedCellPopulation<DIM>*>(&rCellPopulation);
+
+		for(typename AbstractCellPopulation<DIM>::Iterator cell_iter = rCellPopulation.Begin();
+				cell_iter != rCellPopulation.End();
+				++cell_iter)
+		{
+
+			boost::shared_ptr<AbstractCellProperty> p_type = cell_iter->GetCellProliferativeType();
+			unsigned node_index = rCellPopulation.GetLocationIndexUsingCell(*cell_iter); // Get index
+
+			// Only consider epithelial cells
+			if  ( p_type->template IsType<DifferentiatedCellProliferativeType>()==false )
+			{
+
+				double x = rCellPopulation.GetLocationOfCellCentre(*cell_iter)[0]; // Get the x coordinate
+
+				std::pair<double, unsigned> x_coordinate_and_index = std::make_pair(x, node_index);
+
+				// Update the vector
+				epithelial_x_coordinates_and_indices.push_back(x_coordinate_and_index);
+
+			}
+		}
+
+		//Sort indices by the x-coordinate
+		std::sort(epithelial_x_coordinates_and_indices.begin(), epithelial_x_coordinates_and_indices.end());
+
+		//We now go through the epithelial_indices until we've accounted for every cell
+		unsigned num_epithelial_cells = epithelial_x_coordinates_and_indices.size();
+		unsigned current_index = epithelial_x_coordinates_and_indices[0].second;
+		unsigned cell_count = 1;
+
+		epithelium_in_order.push_back(current_index);
+
+		// The way this method works: we start from the first index, and work through its neighbours until
+		// we find another epithelial cell. Note that due to the VT model, we should have at most two neighbouring
+		// epithelial cells.
+		while (cell_count < num_epithelial_cells)
+		{
+			std::set<unsigned> neighbour_indices = rCellPopulation.GetNeighbouringNodeIndices(current_index);
+
+			for(std::set<unsigned>::iterator neighbour_iter=neighbour_indices.begin();
+					neighbour_iter != neighbour_indices.end();
+					++neighbour_iter)
+			{
+
+
+				boost::shared_ptr<AbstractCellProperty> p_type = rCellPopulation.GetCellUsingLocationIndex(*neighbour_iter)->GetCellProliferativeType();
+
+				// If the neighbour is an epithelial cell and not already in the vector, add it.
+				if ( (!p_type->template IsType<DifferentiatedCellProliferativeType>())&&
+						(std::find(epithelium_in_order.begin(), epithelium_in_order.end(), *neighbour_iter) == epithelium_in_order.end()))
+				{
+					// Update epithelium
+					epithelium_in_order.push_back(*neighbour_iter);
+
+					// Update iteration
+					current_index = *neighbour_iter;
+					cell_count += 1;
+					break;
+				}
+			}
+		}
+
+	}
+
 
 	return epithelium_in_order;
 }
