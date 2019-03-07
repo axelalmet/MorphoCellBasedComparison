@@ -123,6 +123,27 @@ public :
      */
     double GetRightCryptBoundary();
 
+    /* Returns crypt height extremes to apply non-zero curvature to base */
+    c_vector<double, 2> GetCryptHeightExtremes(AbstractCellPopulation<2>& rCellPopulation);
+
+    /* Returns crypt width extremes */
+    c_vector<double, 2> GetCryptWidthExtremes(AbstractCellPopulation<2>& rCellPopulation);
+
+    /* Return tangent vector at point based on cosine parametrisation */
+    c_vector<double, 2> GetCosineBasedTangentVector(AbstractCellPopulation<2>& rCellPopulation, c_vector<double, 2> point);
+
+    /*
+     * Return vector of epithelial indices that are close to the considered epithelial node,
+     * but based on an approximated cosine approximation
+     */
+    std::vector<unsigned> GetClosestNeighboursBasedOnCosineApproximation(AbstractCellPopulation<2>& rCellPopulation, unsigned epithelialIndex);
+
+    /*
+     * Return the nearest neighbour based on vector projections from the tangent vector
+     * at a point along the cosine approximation of the epithelium.
+     */
+    unsigned GetNearestNeighboursAlongCosineApproximation(AbstractCellPopulation<2>& rCellPopulation, unsigned epithelialIndex);
+
     /*
      * Set method for geometry-dependent basement membrane for application, i.e.crypt or organoid
      */

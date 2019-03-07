@@ -128,6 +128,204 @@ void OverlappingSpheresBasedBasementMembraneForce::RemoveDuplicates1D(std::vecto
 	rVectorWithDuplicates.erase(std::unique(rVectorWithDuplicates.begin(), rVectorWithDuplicates.end()), rVectorWithDuplicates.end());
 }
 
+c_vector<double,2> OverlappingSpheresBasedBasementMembraneForce::GetCryptHeightExtremes(AbstractCellPopulation<2>& rCellPopulation)
+{
+	MeshBasedCellPopulation<2>* p_tissue = static_cast<MeshBasedCellPopulation<2>*>(&rCellPopulation);
+
+	// Create a vector to store the y-coordinates of the lowest point of the crypt base and the highest point of the
+	// crypt orifice
+	c_vector<double,2> height_extremes;
+
+	double max_height = 0.0;
+	double min_height = DBL_MAX;
+
+	double current_height_coordinate;
+
+	// We iterate over all cells in the tissue, and deal only with those that are epithelial cells
+	for (AbstractCellPopulation<2>::Iterator cell_iter = rCellPopulation.Begin();
+			cell_iter != rCellPopulation.End();
+			++cell_iter)
+	{
+
+		// Need these to not be labelled cells
+		if ( (!cell_iter->GetCellProliferativeType()->IsType<DifferentiatedCellProliferativeType>()) )
+		{
+			Node<2>* p_node = p_tissue->GetNodeCorrespondingToCell(*cell_iter);
+
+			current_height_coordinate = p_node->rGetLocation()[1];
+
+			if (current_height_coordinate > max_height)
+			{
+				max_height = current_height_coordinate;
+			}
+			else if (current_height_coordinate < min_height)
+			{
+				min_height = current_height_coordinate;
+			}
+		}
+	}
+
+	height_extremes[0] = max_height;
+	height_extremes[1] = min_height;
+
+	return height_extremes;
+}
+
+c_vector<double,2> OverlappingSpheresBasedBasementMembraneForce::GetCryptWidthExtremes(AbstractCellPopulation<2>& rCellPopulation)
+{
+	MeshBasedCellPopulation<2>* p_tissue = static_cast<MeshBasedCellPopulation<2>*>(&rCellPopulation);
+
+	// Create a vector to store the y-coordinates of the lowest point of the crypt base and the highest point of the
+	// crypt orifice
+	c_vector<double,2> width_extremes;
+
+	double max_width = 0.0;
+	double min_width = DBL_MAX;
+
+	double current_width_coordinate;
+
+	// We iterate over all cells in the tissue, and deal only with those that are epithelial cells
+	for (AbstractCellPopulation<2>::Iterator cell_iter = rCellPopulation.Begin();
+			cell_iter != rCellPopulation.End();
+			++cell_iter)
+	{
+
+		// Need these to not be labelled cells
+		if ( (!cell_iter->GetCellProliferativeType()->IsType<DifferentiatedCellProliferativeType>()) )
+		{
+			Node<2>* p_node = p_tissue->GetNodeCorrespondingToCell(*cell_iter);
+
+			current_width_coordinate = p_node->rGetLocation()[0];
+
+			if (current_width_coordinate > max_width)
+			{
+				max_width = current_width_coordinate;
+			}
+			else if (current_width_coordinate < min_width)
+			{
+				min_width = current_width_coordinate;
+			}
+		}
+	}
+
+	width_extremes[0] = max_width;
+	width_extremes[1] = min_width;
+
+	return width_extremes;
+}
+
+/*
+ * Method to calculate the tangent line at a point, based on approximating the epithelium positions
+ * by a cosine curve.
+ */
+c_vector<double, 2> OverlappingSpheresBasedBasementMembraneForce::GetCosineBasedTangentVector(AbstractCellPopulation<2>& rCellPopulation, c_vector<double, 2> point)
+{
+	// Get the minimal and maximal x-coordinates of epithelium
+	c_vector<double, 2> width_extremes = GetCryptWidthExtremes(rCellPopulation);
+	double max_width = width_extremes[0];
+	double min_width = width_extremes[1];
+
+	// Get the minimal and maximal y-coordinates of epithelium
+	c_vector<double, 2> height_extremes = GetCryptHeightExtremes(rCellPopulation);
+	double max_height = height_extremes[0];
+	double min_height = height_extremes[1];
+
+	// Define width of crypt
+	double crypt_width = max_width - min_width;
+
+	// Define crypt height
+	double crypt_height = max_height - min_height;
+
+	// Tangent defined by derivative of approximated cosine function
+	c_vector<double, 2> tangent_vector;
+	double x = point[0];
+
+	// y-component is derivative of cos function approximation of epithelium, with appropriate scalings.
+	tangent_vector[0] = 1.0;
+	tangent_vector[1] = -(M_PI/crypt_width)*crypt_height*sin(2.0*M_PI/crypt_width*(x - min_width));
+
+	tangent_vector /= norm_2(tangent_vector); // Convert to unit vector
+
+	// Return a double-length vector---this works best for tracking neighbours
+	tangent_vector *= 2.0;
+
+	return tangent_vector;
+}
+
+/*
+ * Return vector of epithelial indices that are close to the considered epithelial node,
+ * but based on an approximated cosine approximation
+ */
+std::vector<unsigned> OverlappingSpheresBasedBasementMembraneForce::GetClosestNeighboursBasedOnCosineApproximation(AbstractCellPopulation<2>& rCellPopulation, unsigned epithelialIndex)
+{
+	// Initialise vector
+	std::vector<unsigned> closest_neighbours;
+
+	// Get the epithelial indices
+	std::vector<unsigned> epithelial_indices = GetEpithelialIndices(rCellPopulation);
+
+	// Get the location of the epithelial node
+	c_vector<double, 2> epithelial_location = rCellPopulation.GetNode(epithelialIndex)->rGetLocation();
+
+	// Sweep through the indices
+	for (unsigned i = 0; i < epithelial_indices.size(); i++)
+	{
+		unsigned neighbour_index = epithelial_indices[i];
+
+		if (neighbour_index != epithelialIndex)
+		{
+
+			c_vector<double, 2> neighbour_location = rCellPopulation.GetNode(neighbour_index)->rGetLocation();
+
+			if (norm_2(neighbour_location - epithelial_location) < 2.0 ) // Distance of two is based on length of tangent vector, i.e. long enough to catch enough neighbours
+			{
+				closest_neighbours.push_back(neighbour_index);
+			}
+
+		}
+	}
+
+	return closest_neighbours;
+}
+
+/*
+ * Return the nearest neighbour based on vector projections from the tangent vector
+ * at a point along the cosine approximation of the epithelium.
+ */
+unsigned OverlappingSpheresBasedBasementMembraneForce::GetNearestNeighboursAlongCosineApproximation(AbstractCellPopulation<2>& rCellPopulation, unsigned epithelialIndex)
+{
+	double min_scalar_projection = DBL_MAX;
+	double min_projection_index = 0;
+
+	// Get the closest neighbours, based on the cosine approximation
+	std::vector<unsigned> closest_neighbours = GetClosestNeighboursBasedOnCosineApproximation(rCellPopulation, epithelialIndex);
+
+	// Get the location of the considered epithelial node
+	c_vector<double, 2> epithelial_location = rCellPopulation.GetNode(epithelialIndex)->rGetLocation();
+
+	// Calculate the tangent vector at the epithelial node
+	c_vector<double, 2> tangent_vector = GetCosineBasedTangentVector(rCellPopulation, epithelial_location);
+
+	for (unsigned i = 0; i < closest_neighbours.size(); i++)
+	{
+		// Get the location of the neighbour
+		unsigned neighbour_index = closest_neighbours[i];
+		c_vector<double, 2> neighbour_location = rCellPopulation.GetNode(neighbour_index)->rGetLocation();
+
+		// Get the scalar projection of the relative position vector onto the tangent vector
+		double scalar_projection = inner_prod(neighbour_location - epithelial_location, tangent_vector)/norm_2(tangent_vector);
+
+		if (scalar_projection < min_scalar_projection)
+		{
+			min_scalar_projection = scalar_projection;
+			min_projection_index = neighbour_index;
+		}
+	}
+
+	return min_projection_index;
+}
+
+
 /*
  * Function to find the curvature along three points, using the method previously described by SJD
  * Method has been adjusted to account for periodic meshes etc, i.e. heavy use of GetVectorFromAtoB

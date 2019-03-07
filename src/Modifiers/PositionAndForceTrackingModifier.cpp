@@ -205,6 +205,93 @@ std::set<unsigned> PositionAndForceTrackingModifier<DIM>::GetNeighbouringEpithel
 }
 
 template<unsigned DIM>
+std::vector<unsigned> PositionAndForceTrackingModifier<DIM>::GetNeighbouringStromalIndices(AbstractCellPopulation<DIM, DIM>& rCellPopulation, unsigned nodeIndex)
+{
+
+	// Create a set of neighbouring node indices
+	std::vector<unsigned> neighbouring_node_indices;
+
+	if (dynamic_cast<MeshBasedCellPopulation<DIM>*>(&rCellPopulation))
+	{
+
+		MeshBasedCellPopulation<DIM>* p_tissue = static_cast<MeshBasedCellPopulation<DIM>*>(&rCellPopulation);
+
+		p_tissue->CreateVoronoiTessellation();
+
+		assert(!(p_tissue->IsGhostNode(nodeIndex)));
+
+		// Find the indices of the elements owned by this node
+		std::set<unsigned> containing_elem_indices = p_tissue->GetNode(nodeIndex)->rGetContainingElementIndices();
+
+		// Iterate over these elements
+		for (std::set<unsigned>::iterator elem_iter = containing_elem_indices.begin();
+				elem_iter != containing_elem_indices.end();
+				++elem_iter)
+		{
+			// Get all the nodes contained in this element
+			// Don't want to include the current node
+			unsigned neighbour_global_index;
+
+			for (unsigned local_index=0; local_index<3; local_index++)
+			{
+				neighbour_global_index = p_tissue->rGetMesh().GetElement(*elem_iter)->GetNodeGlobalIndex(local_index);
+
+				if( (neighbour_global_index != nodeIndex) && (!p_tissue->IsGhostNode(neighbour_global_index)) )
+				{
+					// Only take epithelial indices
+					boost::shared_ptr<AbstractCellProperty> p_type = p_tissue->GetCellUsingLocationIndex(nodeIndex)->GetCellProliferativeType();
+
+					if (p_type->template IsType<DifferentiatedCellProliferativeType>() )
+					{
+						neighbouring_node_indices.push_back(neighbour_global_index);
+					}
+				}
+			}
+		}
+	}
+	else if (dynamic_cast<MeshBasedCellPopulationWithGhostNodes<DIM>*>(&rCellPopulation))
+	{
+
+		MeshBasedCellPopulationWithGhostNodes<DIM>* p_tissue = static_cast<MeshBasedCellPopulationWithGhostNodes<DIM>*>(&rCellPopulation);
+
+		p_tissue->CreateVoronoiTessellation();
+
+		assert(!(p_tissue->IsGhostNode(nodeIndex)));
+
+		// Find the indices of the elements owned by this node
+		std::set<unsigned> containing_elem_indices = p_tissue->GetNode(nodeIndex)->rGetContainingElementIndices();
+
+		// Iterate over these elements
+		for (std::set<unsigned>::iterator elem_iter = containing_elem_indices.begin();
+				elem_iter != containing_elem_indices.end();
+				++elem_iter)
+		{
+			// Get all the nodes contained in this element
+			// Don't want to include the current node
+			unsigned neighbour_global_index;
+
+			for (unsigned local_index=0; local_index<3; local_index++)
+			{
+				neighbour_global_index = p_tissue->rGetMesh().GetElement(*elem_iter)->GetNodeGlobalIndex(local_index);
+
+				if( (neighbour_global_index != nodeIndex) && (!p_tissue->IsGhostNode(neighbour_global_index)) )
+				{
+					// Only take epithelial indices
+					boost::shared_ptr<AbstractCellProperty> p_type = p_tissue->GetCellUsingLocationIndex(nodeIndex)->GetCellProliferativeType();
+
+					if (p_type->template IsType<DifferentiatedCellProliferativeType>() )
+					{
+						neighbouring_node_indices.push_back(neighbour_global_index);
+					}
+				}
+			}
+		}
+	}
+
+	return neighbouring_node_indices;
+}
+
+template<unsigned DIM>
 std::vector<unsigned> PositionAndForceTrackingModifier<DIM>::GetEpitheliumInArcLengthOrder(AbstractCellPopulation<DIM, DIM>& rCellPopulation)
 {
 
@@ -365,7 +452,7 @@ std::vector<unsigned> PositionAndForceTrackingModifier<DIM>::GetEpitheliumInArcL
 	}
 	else if (dynamic_cast<NodeBasedCellPopulation<DIM>*>(&rCellPopulation))
 	{
-//		NodeBasedCellPopulation<DIM>* p_tissue = static_cast<NodeBasedCellPopulation<DIM>*>(&rCellPopulation);
+		//		NodeBasedCellPopulation<DIM>* p_tissue = static_cast<NodeBasedCellPopulation<DIM>*>(&rCellPopulation);
 
 		for(typename AbstractCellPopulation<DIM>::Iterator cell_iter = rCellPopulation.Begin();
 				cell_iter != rCellPopulation.End();
@@ -392,37 +479,97 @@ std::vector<unsigned> PositionAndForceTrackingModifier<DIM>::GetEpitheliumInArcL
 		//Sort indices by the x-coordinate
 		std::sort(epithelial_x_coordinates_and_indices.begin(), epithelial_x_coordinates_and_indices.end());
 
-		//We now go through the epithelial_indices until we've accounted for every cell
-		unsigned num_epithelial_cells = epithelial_x_coordinates_and_indices.size();
-		unsigned current_index = epithelial_x_coordinates_and_indices[0].second;
-		unsigned cell_count = 1;
-
-		epithelium_in_order.push_back(current_index);
-
-		// The way this method works: we start from the first index, and work through its neighbours until
-		// we find another epithelial cell. Note that due to the VT model, we should have at most two neighbouring
-		// epithelial cells.
-		while (cell_count < num_epithelial_cells)
+		for (unsigned i = 0; i < epithelial_x_coordinates_and_indices.size(); i++)
 		{
-			std::set<unsigned> neighbour_indices = rCellPopulation.GetNeighbouringNodeIndices(current_index);
+			epithelium_in_order.push_back(epithelial_x_coordinates_and_indices[i].second);
+		}
 
-			for(std::set<unsigned>::iterator neighbour_iter=neighbour_indices.begin();
-					neighbour_iter != neighbour_indices.end();
-					++neighbour_iter)
+	}
+
+	return epithelium_in_order;
+}
+
+/*
+ * Method to get the epithelium-attached stroma in increasing arclength order
+ */
+template<unsigned DIM>
+std::vector<unsigned> PositionAndForceTrackingModifier<DIM>::GetStromaAttachedToEpitheliumInArcLengthOrder(AbstractCellPopulation<DIM, DIM>& rCellPopulation)
+{
+
+	// Initialise the vector
+	std::vector<unsigned> epithelium_attached_stroma_in_order;
+
+	// We sort the indices in order of x-coordinate
+	std::vector<std::pair<double, unsigned> > stromal_x_coordinates_and_indices;
+
+	// First, we obtain the epithelial indices and sort them by their x-coordinate. We assume that the left-most cell is the 'starting' cell.
+	if (dynamic_cast<MeshBasedCellPopulationWithGhostNodes<DIM>*>(&rCellPopulation))
+	{
+		MeshBasedCellPopulationWithGhostNodes<DIM>* p_tissue = static_cast<MeshBasedCellPopulationWithGhostNodes<DIM>*>(&rCellPopulation);
+
+		p_tissue->CreateVoronoiTessellation();
+
+		// Find the stromal neighbours from the epithelium
+		std::vector<unsigned> epithelium_in_arc_length_order = GetEpitheliumInArcLengthOrder(rCellPopulation);
+
+		for (unsigned i = 0; i < epithelium_in_arc_length_order.size(); i++)
+		{
+			unsigned epithelial_index = epithelium_in_arc_length_order[i];
+
+			// Get the neighbouring stromal indices
+			std::vector<unsigned> stromal_neighbours = GetNeighbouringStromalIndices(rCellPopulation, epithelial_index);
+
+			for(unsigned j = 0; j < stromal_neighbours.size(); j++)
 			{
 
+				unsigned stromal_index = stromal_neighbours[j];
 
-				boost::shared_ptr<AbstractCellProperty> p_type = rCellPopulation.GetCellUsingLocationIndex(*neighbour_iter)->GetCellProliferativeType();
+				double x = rCellPopulation.GetNode(stromal_index)->rGetLocation()[0];
+				std::pair<double, unsigned> x_coordinate_and_index = std::make_pair(x, stromal_index);
 
-				// If the neighbour is an epithelial cell and not already in the vector, add it.
-				if ( (!p_type->template IsType<DifferentiatedCellProliferativeType>())&&
-						(std::find(epithelium_in_order.begin(), epithelium_in_order.end(), *neighbour_iter) == epithelium_in_order.end()))
+				// Update the vector
+				stromal_x_coordinates_and_indices.push_back(x_coordinate_and_index);
+			}
+		}
+
+		//Sort indices by the x-coordinate
+		std::sort(stromal_x_coordinates_and_indices.begin(), stromal_x_coordinates_and_indices.end());
+
+		std::vector<unsigned> stromal_indices;
+		for (unsigned i = 0; i < stromal_x_coordinates_and_indices.size(); i++)
+		{
+			stromal_indices.push_back(stromal_x_coordinates_and_indices[i].second);
+		}
+
+		//We now go through the epithelial_indices until we've accounted for every cell
+		unsigned num_stromal_cells = stromal_x_coordinates_and_indices.size();
+		unsigned current_index = stromal_indices[0];
+		unsigned cell_count = 1;
+
+		epithelium_attached_stroma_in_order.push_back(current_index);
+
+		// The way this method works: we start from the first index, and work through its neighbours until
+		// we find another stromal cell that is attached to epithelium (so the check is slightly different).
+		while (cell_count < num_stromal_cells)
+		{
+			std::vector<unsigned> neighbour_indices = GetNeighbouringStromalIndices(rCellPopulation, current_index);
+
+			for(unsigned k = 0; k < neighbour_indices.size(); k++)
+			{
+				unsigned neighbour_index = neighbour_indices[k];
+
+				boost::shared_ptr<AbstractCellProperty> p_type = rCellPopulation.GetCellUsingLocationIndex(neighbour_index)->GetCellProliferativeType();
+
+				// If the neighbour is a stromal cell and attached to the epithelium, add it.
+				if ( (p_type->template IsType<DifferentiatedCellProliferativeType>())&&
+						(std::find(epithelium_attached_stroma_in_order.begin(), epithelium_attached_stroma_in_order.end(), neighbour_index) == epithelium_attached_stroma_in_order.end())
+						&&(std::find(stromal_indices.begin(), stromal_indices.end(), neighbour_index) != stromal_indices.end()) )
 				{
 					// Update epithelium
-					epithelium_in_order.push_back(*neighbour_iter);
+					epithelium_attached_stroma_in_order.push_back(neighbour_index);
 
 					// Update iteration
-					current_index = *neighbour_iter;
+					current_index = neighbour_index;
 					cell_count += 1;
 					break;
 				}
@@ -431,8 +578,7 @@ std::vector<unsigned> PositionAndForceTrackingModifier<DIM>::GetEpitheliumInArcL
 
 	}
 
-
-	return epithelium_in_order;
+	return epithelium_attached_stroma_in_order;
 }
 
 template<unsigned DIM>
@@ -451,9 +597,6 @@ void PositionAndForceTrackingModifier<DIM>::CalculateModifierData(AbstractCellPo
 
 	if (dynamic_cast<MeshBasedCellPopulationWithGhostNodes<DIM>*>(&rCellPopulation))
 	{
-		MeshBasedCellPopulationWithGhostNodes<DIM>* p_tissue = static_cast<MeshBasedCellPopulationWithGhostNodes<DIM>*>(&rCellPopulation);
-
-		p_tissue->CreateVoronoiTessellation();
 
 		for (unsigned i = 0; i < num_epithelial_cells; i++)
 		{
@@ -477,29 +620,15 @@ void PositionAndForceTrackingModifier<DIM>::CalculateModifierData(AbstractCellPo
 	}
 	else if (dynamic_cast<MeshBasedCellPopulation<DIM>*>(&rCellPopulation))
 	{
-		MeshBasedCellPopulation<DIM>* p_tissue = static_cast<MeshBasedCellPopulation<DIM>*>(&rCellPopulation);
-
-		p_tissue->CreateVoronoiTessellation();
 
 		for (unsigned i = 0; i < num_epithelial_cells; i++)
 		{
+
 			// Get the location and force via the index
 			unsigned epithelial_node_index = epithelial_indices[i];
-			PRINT_VARIABLE(epithelial_node_index);
 
 			c_vector<double, 2> cell_location = rCellPopulation.GetNode(epithelial_node_index)->rGetLocation();
 
-			PRINT_2_VARIABLES(cell_location[0], cell_location[1]);
-
-			std::vector<double> node_attributes = rCellPopulation.GetNode(epithelial_node_index)->rGetNodeAttributes();
-
-			PRINT_2_VARIABLES(cell_location[0], cell_location[1]);
-
-
-			for (unsigned j = 0; j < node_attributes.size(); j++)
-			{
-				PRINT_VARIABLE(node_attributes[j]);
-			}
 
 			c_vector<double, 2> applied_force =  rCellPopulation.GetNode(epithelial_node_index)->rGetAppliedForce();
 
@@ -509,7 +638,26 @@ void PositionAndForceTrackingModifier<DIM>::CalculateModifierData(AbstractCellPo
 			y_coordinates.push_back(cell_location[1]);
 			horizontal_forces.push_back(applied_force[0]);
 			vertical_forces.push_back(applied_force[1]);
+		}
+	}
+	else if (dynamic_cast<NodeBasedCellPopulation<DIM>*>(&rCellPopulation))
+	{
+		for (unsigned i = 0; i < epithelial_indices.size(); i++)
+		{
+			// Get the location and force via the index
+			unsigned epithelial_node_index = epithelial_indices[i];
 
+			c_vector<double, 2> cell_location = rCellPopulation.GetNode(epithelial_node_index)->rGetLocation();
+
+
+			c_vector<double, 2> applied_force =  rCellPopulation.GetNode(epithelial_node_index)->rGetAppliedForce();
+
+
+			// Add the coordinates
+			x_coordinates.push_back(cell_location[0]);
+			y_coordinates.push_back(cell_location[1]);
+			horizontal_forces.push_back(applied_force[0]);
+			vertical_forces.push_back(applied_force[1]);
 		}
 	}
 

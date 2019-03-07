@@ -36,9 +36,9 @@
 
 static const std::string M_OUTPUT_DIRECTORY = "MeasuringOSStresses";
 static const double M_DT = 0.005;
-static const double M_END_TIME = 1.0;
+static const double M_END_TIME = 0.1;
 //static const double M_SECOND_END_TIME = 1.0;
-static const double M_SAMPLING_TIMESTEP = 0.25*M_END_TIME/M_DT;
+static const double M_SAMPLING_TIMESTEP = M_END_TIME/M_DT;
 
 class TestStressesInDeformationForOSModels : public AbstractCellBasedTestSuite
 {
@@ -242,9 +242,9 @@ public:
 	{
 
 		//		Set all the spring stiffness variables
-				double epithelial_epithelial_stiffness = 45.0;
-				double epithelial_stromal_stiffness = 45.0;
-				double stromal_stromal_stiffness = 45.0;
+		//				double epithelial_epithelial_stiffness = 45.0;
+		//				double epithelial_stromal_stiffness = 45.0;
+		//				double stromal_stromal_stiffness = 45.0;
 
 		//Set the number of cells across and down for the array
 		unsigned cells_across = 10;
@@ -361,21 +361,25 @@ public:
 				double x = cell_population.GetLocationOfCellCentre(*cell_iter)[0];
 				double y = cell_population.GetLocationOfCellCentre(*cell_iter)[1];
 
-				if ( (x >= left_boundary - 1.0)&&(x <= right_boundary + 1.0)&&(y > bottom_boundary - 1.0) )
+				if (y > bottom_boundary - 1.0)
 				{
-					cell_iter->SetCellProliferativeType(p_stem_type);
-				}
-				else if (y == max_height)
-				{
-					cell_iter->SetCellProliferativeType(p_stem_type);
-				}
-				else if ((y < bottom_boundary)&&((x < left_boundary)||(x > right_boundary)) ) // This check cleans up the epithelium at the bottom
-				{
-					cell_iter->SetCellProliferativeType(p_diff_type);
+					if (y < bottom_boundary)
+					{
+						if ( (x >= left_boundary - 0.5)&&(x <= right_boundary + 0.5) )
+						{
+							cell_iter->SetCellProliferativeType(p_stem_type);
+						}
+					}
+					else if ( (x >= left_boundary - 1.0)&&(x <= right_boundary + 1.0) )
+					{
+						cell_iter->SetCellProliferativeType(p_stem_type);
+					}
+					else if (y == max_height)
+					{
+						cell_iter->SetCellProliferativeType(p_stem_type);
+					}
 				}
 			}
-
-
 
 			//Output data to vtk format so we can visualise it in Paraview
 			//			cell_population.AddCellWriter<GeneralisedCellAppliedForceWriter>();
@@ -394,15 +398,15 @@ public:
 			simulator.SetEndTime(M_END_TIME); //Hopefully this is long enough for a steady state
 
 			//Add linear spring force (modified to have three different spring stiffnesses, depending on the type of pair)
-			MAKE_PTR(LinearSpringForceWithVariableRestLength<2>, p_spring_force);
-			//			p_spring_force->SetCutOffLength(epithelial_epithelial_resting_spring_length);
-			p_spring_force->SetEpithelialEpithelialSpringStiffness(epithelial_epithelial_stiffness); //Default is 15
-			p_spring_force->SetEpithelialStromalSpringStiffness(epithelial_stromal_stiffness); //Default is 15
-			p_spring_force->SetStromalStromalSpringStiffness(stromal_stromal_stiffness); //Default is 15
-			p_spring_force->SetEpithelialEpithelialRestingSpringLength(epithelial_epithelial_resting_spring_length);
-			p_spring_force->SetCutOffLength(radius_of_interaction);
-			p_spring_force->SetMeinekeDivisionRestingSpringLength(division_separation);
-			simulator.AddForce(p_spring_force);
+			//			MAKE_PTR(LinearSpringForceWithVariableRestLength<2>, p_spring_force);
+			//			//			p_spring_force->SetCutOffLength(epithelial_epithelial_resting_spring_length);
+			//			p_spring_force->SetEpithelialEpithelialSpringStiffness(epithelial_epithelial_stiffness); //Default is 15
+			//			p_spring_force->SetEpithelialStromalSpringStiffness(epithelial_stromal_stiffness); //Default is 15
+			//			p_spring_force->SetStromalStromalSpringStiffness(stromal_stromal_stiffness); //Default is 15
+			//			p_spring_force->SetEpithelialEpithelialRestingSpringLength(epithelial_epithelial_resting_spring_length);
+			//			p_spring_force->SetCutOffLength(radius_of_interaction);
+			//			p_spring_force->SetMeinekeDivisionRestingSpringLength(division_separation);
+			//			simulator.AddForce(p_spring_force);
 
 			//			//Add basement membrane force
 			//			MAKE_PTR(OverlappingSpheresBasedBasementMembraneForce, p_bm_force);
@@ -425,9 +429,9 @@ public:
 			p_anoikis_killer->SetCutOffRadius(radius_of_interaction);
 			simulator.AddCellKiller(p_anoikis_killer);
 
-			//			// Add modifier to track positions
-			//			MAKE_PTR(PositionAndForceTrackingModifier<2>, p_position_tracking_modifier);
-			//			simulator.AddSimulationModifier(p_position_tracking_modifier);
+			// Add modifier to track positions
+			MAKE_PTR(PositionAndForceTrackingModifier<2>, p_position_tracking_modifier);
+			simulator.AddSimulationModifier(p_position_tracking_modifier);
 
 			//			Fix the bottom row of cells
 			c_vector<double, 2> point, normal;

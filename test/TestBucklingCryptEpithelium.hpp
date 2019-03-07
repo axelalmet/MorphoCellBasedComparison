@@ -40,7 +40,7 @@
 static const std::string M_OUTPUT_DIRECTORY = "StressesInBucklingEpithelium";
 static const double M_DT = 0.005;
 static const double M_END_TIME = 100.0;
-static const double M_SAMPLING_TIMESTEP = M_END_TIME/M_DT;
+static const double M_SAMPLING_TIMESTEP = 0.1*M_END_TIME/M_DT;
 
 class TestBucklingCryptEpithelium : public AbstractCellBasedTestSuite
 {
@@ -54,14 +54,13 @@ public:
 		double stromal_stromal_stiffness = 45.0;
 
 		//Set the number of cells across and down for the array
-		unsigned cells_across = 30;
-		unsigned cells_up = 20;
+		unsigned cells_across = 20;
+		unsigned cells_up = 10;
 		unsigned ghosts = 2; //Set the number of ghost node layers
 
 		//Set the basement membrane force parameters
-		double bm_stiffness = 12.0;
-		double target_curvature = 0.3;
-		//
+		double bm_stiffness = 10.0;
+		double target_curvature = 0.4;
 
 		double epithelial_epithelial_resting_spring_length = 1.0;
 
@@ -94,8 +93,8 @@ public:
 		}
 
 
-		double left_boundary = 0.4*max_width;
-		double right_boundary = 0.6*max_width;
+		double left_boundary = 0.25*max_width;
+		double right_boundary = 0.75*max_width;
 
 
 
@@ -121,8 +120,10 @@ public:
 				UniformCellCycleModel* p_cycle_model = new UniformCellCycleModel(); //Uniformly distributed cell cycle times
 				//			NoCellCycleModel* p_cycle_model = new NoCellCycleModel(); //Uniformly distributed cell cycle times
 				p_cycle_model->SetDimension(2);
-				double birth_time = 12.0*RandomNumberGenerator::Instance()->ranf(); //We would like the birth time to be ~U(0,13) and set in the past
+				double birth_time = 6.0*RandomNumberGenerator::Instance()->ranf(); //We would like the birth time to be ~U(0,13) and set in the past
 				p_cycle_model->SetBirthTime(-birth_time);
+				p_cycle_model->SetMinCellCycleDuration(4.0);
+				p_cycle_model->SetMaxCellCycleDuration(8.0);
 
 				CellPtr p_cell(new Cell(p_wildtype_state, p_cycle_model));
 				p_cell->InitialiseCellCycleModel(); // For paranoia really.
@@ -199,10 +200,10 @@ public:
 		//Add anoikis-based cell killer
 		MAKE_PTR_ARGS(AnoikisCellKiller, p_anoikis_killer, (&cell_population));
 		simulator.AddCellKiller(p_anoikis_killer);
-//
+
 //		// Add modifier to track positions
-//		MAKE_PTR(PositionAndForceTrackingModifier<2>, p_position_tracking_modifier);
-//		simulator.AddSimulationModifier(p_position_tracking_modifier);
+		MAKE_PTR(PositionAndForceTrackingModifier<2>, p_position_tracking_modifier);
+		simulator.AddSimulationModifier(p_position_tracking_modifier);
 
 		//Fix the bottom row of cells
 		c_vector<double, 2> point, normal;

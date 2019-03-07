@@ -125,14 +125,24 @@ public:
     void UpdateCellData(AbstractCellPopulation<DIM,DIM>& rCellPopulation);
 
     /*
-     * Method to obtain non-ghost neighbours of index
+     * Method to obtain non-ghost epithelial neighbours of index
      */
     std::set<unsigned> GetNeighbouringEpithelialIndices(AbstractCellPopulation<DIM, DIM>& rCellPopulation, unsigned nodeIndex);
+
+    /*
+     * Method to obtain non-ghost stromal neighbours of index
+     */
+    std::vector<unsigned> GetNeighbouringStromalIndices(AbstractCellPopulation<DIM, DIM>& rCellPopulation, unsigned nodeIndex);
 
     /**
      * Method to get epithelium in increasing arclength order.
      */
     std::vector<unsigned> GetEpitheliumInArcLengthOrder(AbstractCellPopulation<DIM, DIM>& rCellPopulation);
+
+    /*
+     * Method to get the epithelium-attached stroma in increasing arclength order
+     */
+    std::vector<unsigned> GetStromaAttachedToEpitheliumInArcLengthOrder(AbstractCellPopulation<DIM, DIM>& rCellPopulation);
 
     /*
      * Method to obtain the positions and forces
